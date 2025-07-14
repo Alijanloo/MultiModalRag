@@ -1,0 +1,5 @@
+fastapi
+elasticsearch
+langchain
+pydantic
+numpy
