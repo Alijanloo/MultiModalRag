@@ -36,6 +36,6 @@ The application integrates with Google's Gemini 2.5-Flash multi-modal model for 
 ## Installation
 
 ```bash
-# Install the package in development mode
+uv pip install torch --index-url https://download.pytorch.org/whl/cpu
 uv pip install -e .
 ```

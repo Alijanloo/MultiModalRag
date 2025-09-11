@@ -3,3 +3,7 @@ elasticsearch
 langchain
 pydantic
 numpy
+docling
+pypdf
+requests
+pillow
