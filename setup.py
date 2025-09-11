@@ -7,14 +7,14 @@ with open("requirements.txt", "r", encoding="utf-8") as f:
     requirements = f.read().splitlines()
 
 setup(
-    name="pdf2table",
+    name="multimodalrag",
     version="0.1.0",
-    author="Pdf2Table Team",
+    author="Ali Janloo",
     author_email="mahmoodjanlooali@gmail.com",
-    description="A RAG application for indexing and inferring tables from PDF documents",
+    description="A Multi-Modal RAG application for intelligently processing and indexing unstructured medical PDF documents",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Alijanloo/Pdf2Table",
+    url="https://github.com/Alijanloo/MultiModalRag",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
