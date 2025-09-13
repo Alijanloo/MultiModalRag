@@ -7,3 +7,4 @@ docling
 pypdf
 requests
 pillow
+aiohttp
