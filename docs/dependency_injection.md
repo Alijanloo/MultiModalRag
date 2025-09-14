@@ -192,6 +192,16 @@ if __name__ == "__main__":
     search_cli()
 ```
 
+## Common Provider Types
+
+1. **Factory**: Creates new instance each time
+2. **Singleton**: Creates one instance, reuses it
+3. **Resource**: Manages lifecycle of expensive objects
+4. **Configuration**: Provides configuration values
+5. **Callable**: Wraps functions/callables
+
+The key insight is that `Resource` is specifically designed for objects that need both creation AND cleanup, making it perfect for database connections, file handles, network clients, etc.
+
 ## Best Practices
 
 1. **Wire Early**: Wire the container at application startup
