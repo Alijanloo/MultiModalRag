@@ -8,3 +8,4 @@ pypdf
 requests
 pillow
 aiohttp
+dependency-injector
