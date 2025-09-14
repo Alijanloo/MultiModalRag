@@ -1,0 +1,23 @@
+# MultiModal RAG Configuration File
+# This file contains configuration settings for the MultiModal RAG application
+
+elasticsearch:
+  hosts:
+  - http://localhost:9200
+  username: null
+  password: null
+  verify_certs: true
+  use_ssl: false
+  ca_certs: null
+  index_name: multimodal_index
+  vector_dimensions: 1536
+  shards: 1
+  replicas: 0
+  default_search_size: 10
+  max_search_size: 100
+logging:
+  level: INFO
+  use_colors: true
+  console_output: true
+  file_output: true
+  format_type: detailed
