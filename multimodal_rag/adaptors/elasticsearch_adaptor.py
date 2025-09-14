@@ -338,7 +338,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         try:
             index_name = request.index_name or self._index_name
 
-            # Build query for chunks (now we identify chunks by the presence of chunk field)
+            # Build query for chunks
             query = self._build_chunk_search_query(request)
 
             search_params = {
@@ -383,7 +383,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         try:
             index_name = request.index_name or self._index_name
 
-            # Build text query for documents (now we identify documents by the presence of document field)
+            # Build text query for documents
             query = {
                 "bool": {
                     "must": [
