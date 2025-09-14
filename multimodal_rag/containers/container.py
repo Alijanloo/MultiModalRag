@@ -2,6 +2,7 @@
 
 from dependency_injector import containers, providers
 from elasticsearch import AsyncElasticsearch
+from elastic_transport.client_utils import DEFAULT
 
 from ..frameworks.elasticsearch_config import ElasticsearchConfig
 from ..frameworks.logging_config import LoggerFactory
@@ -38,7 +39,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
     elasticsearch_client = providers.Singleton(
         AsyncElasticsearch,
         hosts=elasticsearch_config.provided.hosts,
-        http_auth=providers.Callable(
+        basic_auth=providers.Callable(
             lambda username, password: (username, password)
             if username and password
             else None,
@@ -46,7 +47,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
             elasticsearch_config.provided.password,
         ),
         verify_certs=elasticsearch_config.provided.verify_certs,
-        ca_certs=elasticsearch_config.provided.ca_certs,
+        ca_certs=elasticsearch_config.provided.ca_certs or DEFAULT,
     )
 
     # Repository Layer
