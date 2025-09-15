@@ -1,5 +1,8 @@
 """Application dependency injection container."""
 
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from dependency_injector import containers, providers
 from elasticsearch import AsyncElasticsearch
 from elastic_transport.client_utils import DEFAULT
@@ -8,6 +11,26 @@ from ..frameworks.elasticsearch_config import ElasticsearchConfig
 from ..frameworks.logging_config import LoggerFactory
 from ..adaptors.elasticsearch_adaptor import ElasticsearchDocumentAdaptor
 from ..usecases.document_indexing import DocumentIndexingUseCase, DocumentSearchUseCase
+
+
+@asynccontextmanager
+async def elasticsearch_client_resource(
+    hosts,
+    basic_auth=None,
+    verify_certs=True,
+    ca_certs=DEFAULT,
+) -> AsyncGenerator[AsyncElasticsearch, None]:
+    """Create and manage Elasticsearch client lifecycle."""
+    client = AsyncElasticsearch(
+        hosts=hosts,
+        basic_auth=basic_auth,
+        verify_certs=verify_certs,
+        ca_certs=ca_certs,
+    )
+    try:
+        yield client
+    finally:
+        await client.close()
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
@@ -36,8 +59,8 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
 
     # Elasticsearch Client
-    elasticsearch_client = providers.Singleton(
-        AsyncElasticsearch,
+    elasticsearch_client = providers.Resource(
+        elasticsearch_client_resource,
         hosts=elasticsearch_config.provided.hosts,
         basic_auth=providers.Callable(
             lambda username, password: (username, password)

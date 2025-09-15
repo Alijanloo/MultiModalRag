@@ -121,7 +121,7 @@ async def initialize_system(
     print("🚀 Initializing MultiModal RAG system with dependency injection...")
 
     # Get the document repository to initialize indices
-    document_repository = container.document_repository()
+    document_repository = await container.document_repository()
     await document_repository.initialize_indices()
     print("✅ Elasticsearch unified index initialized")
 
@@ -136,8 +136,8 @@ async def main():
         await initialize_system(container)
 
         # Get dependencies from container
-        indexing_use_case = container.document_indexing_use_case()
-        search_use_case = container.document_search_use_case()
+        indexing_use_case = await container.document_indexing_use_case()
+        search_use_case = await container.document_search_use_case()
 
         # Index documents
         await index_documents(indexing_use_case)
