@@ -5,7 +5,9 @@ from typing import Optional, Dict, Any
 from google import genai
 
 from multimodal_rag.usecases.interfaces.llm_service import LLMServiceInterface
-from multimodal_rag import logger
+from multimodal_rag.frameworks.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class GoogleGenAILLMService(LLMServiceInterface):

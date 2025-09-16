@@ -4,7 +4,9 @@ from typing import List, Union
 from google import genai
 
 from multimodal_rag.usecases.interfaces.embedding_service import EmbeddingServiceInterface
-from multimodal_rag import logger
+from multimodal_rag.frameworks.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class GoogleGenAIEmbeddingService(EmbeddingServiceInterface):

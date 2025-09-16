@@ -10,3 +10,4 @@ pillow
 aiohttp
 dependency-injector
 google-genai
+pyyaml

@@ -1,13 +1,6 @@
 import sys
-from pathlib import Path
 
-# Add project root to path for local imports
-project_root = Path(__file__).parents[1]
-sys.path.insert(0, str(project_root))
-
-# Import after path modification
-# pylint: disable=wrong-import-position
-from multimodal_rag import get_logger
+from multimodal_rag.frameworks.logging_config import get_logger
 
 def main():
     """Main function to test logging."""
