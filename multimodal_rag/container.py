@@ -86,15 +86,17 @@ class ApplicationContainer(containers.DeclarativeContainer):
     # Embedding Service
     embedding_service = providers.Factory(
         GoogleGenAIEmbeddingService,
-        api_key=config.google_genai.api_key,
+        api_keys=config.google_genai.api_keys,
         model=config.google_genai.embedding_model,
+        embedding_dimensions=config.google_genai.embedding_dimensions,
     )
 
     # LLM Service for content generation
     llm_service = providers.Factory(
         GoogleGenAILLMService,
-        api_key=config.google_genai.api_key,
+        api_keys=config.google_genai.api_keys,
         default_model=config.google_genai.default_llm_model,
+        embedding_dimensions=config.google_genai.embedding_dimensions,
     )
 
     # Use Cases
