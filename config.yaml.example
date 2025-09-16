@@ -15,6 +15,13 @@ elasticsearch:
   replicas: 0
   default_search_size: 10
   max_search_size: 100
+
+google_genai:
+  api_key: "your_google_genai_api_key_here"
+  default_llm_model: "gemini-2.5-flash"
+  embedding_model: "gemini-embedding-001"
+  embedding_dimensions: 768
+
 logging:
   level: INFO
   use_colors: true

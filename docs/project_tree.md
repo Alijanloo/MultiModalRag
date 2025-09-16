@@ -1,7 +1,7 @@
 # MultiModal RAG Project Structure
 
 ## Overview
-This project implements a Clean Architecture approach for a Multi-Modal RAG system with Elasticsearch integration for document and chunk indexing.
+This project implements a Clean Architecture approach for a Multi-Modal RAG system with Elasticsearch integration for document and chunk indexing, and Google GenAI services for embeddings and LLM operations.
 
 ## Current Implementation
 
@@ -23,6 +23,8 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
   - Response DTOs: `SearchResponse`, `IndexDocumentResponse`, etc.
 - `interfaces/`: Abstract interfaces for repositories and services
   - `document_repository.py`: Repository and embedding service interfaces
+  - `embedding_service.py`: Interface for embedding generation services
+  - `llm_service.py`: Interface for Large Language Model services
 
 #### Adaptors (`multimodal_rag/adaptors/`)
 - `elasticsearch_adaptor.py`: Elasticsearch implementation 
@@ -37,6 +39,13 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
 #### Frameworks (`multimodal_rag/frameworks/`)
 - `elasticsearch_config.py`: Configuration for Elasticsearch
 - `logging_config.py`: Logging configuration
+- `google_genai_embedding_service.py`: Google GenAI embedding service implementation
+- `google_genai_llm_service.py`: Google GenAI LLM service implementation
+
+#### Config (`multimodal_rag/config/`)
+- Configuration and settings objects for the application
+- Centralized location for application configuration classes
+- Environment-specific settings and constants
 
 ### Index Structure
 
@@ -56,9 +65,11 @@ The Elasticsearch adaptor uses a **unified index** approach where both documents
 1. **Clean Architecture**: Separation of concerns with dependency inversion
 2. **Unified Index**: Single Elasticsearch index for both document types
 3. **Type Safety**: Pydantic models throughout for validation
-4. **Vector Search**: Dense vector support for semantic similarity
+4. **Vector Search**: Dense vector support for semantic similarity with Google GenAI embeddings
 5. **Hybrid Search**: Combined text and vector search capabilities
 6. **Document References**: Chunks maintain references to parent documents
+7. **LLM Integration**: Google GenAI for content generation and Q&A
+8. **Dependency Injection**: Proper DI container setup for all services
 
 ### Usage Examples
 
@@ -71,11 +82,15 @@ The Elasticsearch adaptor uses a **unified index** approach where both documents
 - **Docling Core**: Document processing and chunking
 - **Pydantic**: Data validation and serialization
 - **AsyncIO**: Asynchronous operations
+- **Google GenAI**: Embedding generation and LLM services
+- **Dependency Injector**: Dependency injection framework
 
 ## Next Steps
 
-1. Implement actual embedding service integration
-2. Add more sophisticated search ranking
-3. Implement document relationship mapping
-4. Add monitoring and metrics
-5. Optimize index performance for large datasets
+1. ✅ Implement embedding service integration (Google GenAI)
+2. ✅ Add LLM service for content generation  
+3. Add more sophisticated search ranking
+4. Implement document relationship mapping
+5. Add monitoring and metrics
+6. Optimize index performance for large datasets
+7. Add RAG pipeline with context retrieval and generation

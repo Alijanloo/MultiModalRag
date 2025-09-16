@@ -7,10 +7,12 @@ from dependency_injector import containers, providers
 from elasticsearch import AsyncElasticsearch
 from elastic_transport.client_utils import DEFAULT
 
-from ..frameworks.elasticsearch_config import ElasticsearchConfig
-from ..frameworks.logging_config import LoggerFactory
-from ..adaptors.elasticsearch_adaptor import ElasticsearchDocumentAdaptor
-from ..usecases.document_indexing import DocumentIndexingUseCase, DocumentSearchUseCase
+from multimodal_rag.frameworks.elasticsearch_config import ElasticsearchConfig
+from multimodal_rag.frameworks.logging_config import LoggerFactory
+from multimodal_rag.frameworks.google_genai_embedding_service import GoogleGenAIEmbeddingService
+from multimodal_rag.frameworks.google_genai_llm_service import GoogleGenAILLMService
+from multimodal_rag.adaptors.elasticsearch_adaptor import ElasticsearchDocumentAdaptor
+from multimodal_rag.usecases.document_indexing import DocumentIndexingUseCase, DocumentSearchUseCase
 
 
 @asynccontextmanager
@@ -81,9 +83,18 @@ class ApplicationContainer(containers.DeclarativeContainer):
         vector_dimensions=elasticsearch_config.provided.vector_dimensions,
     )
 
-    # Embedding Service (placeholder - implement based on your needs)
+    # Embedding Service
     embedding_service = providers.Factory(
-        lambda: None,  # Replace with actual embedding service implementation
+        GoogleGenAIEmbeddingService,
+        api_key=config.google_genai.api_key,
+        model=config.google_genai.embedding_model,
+    )
+
+    # LLM Service for content generation
+    llm_service = providers.Factory(
+        GoogleGenAILLMService,
+        api_key=config.google_genai.api_key,
+        default_model=config.google_genai.default_llm_model,
     )
 
     # Use Cases

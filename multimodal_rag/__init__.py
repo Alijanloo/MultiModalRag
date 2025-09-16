@@ -11,6 +11,12 @@ setup_logging(
     use_colors=os.getenv("MULTIMODAL_RAG_USE_COLORS", "true").lower() == "true",
 )
 
+# Create a single logger instance for the entire multimodal_rag package
+logger = get_logger("multimodal_rag")
+
 DEFAULT_PATH = Path(os.path.realpath(__file__)).parents[1]
 
-__all__ = ["get_logger", "setup_logging", "DEFAULT_PATH"]
+__all__ = [
+    "DEFAULT_PATH",
+    "logger",
+]
