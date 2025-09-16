@@ -6,8 +6,8 @@ from typing import Dict, List, Optional, Any
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.exceptions import NotFoundError
 
-from ..usecases.interfaces.document_repository import IDocumentIndexRepository
-from ..usecases.dtos import (
+from ...usecases.interfaces.document_repository import IDocumentIndexRepository
+from ...usecases.dtos import (
     IndexDocumentResponse,
     IndexChunkResponse,
     SearchRequest,
@@ -16,7 +16,7 @@ from ..usecases.dtos import (
     BulkIndexResponse,
     GetDocumentResponse,
 )
-from ..entities.document import DoclingDocument, DocChunk
+from ...entities.document import DoclingDocument, DocChunk
 
 logger = logging.getLogger(__name__)
 

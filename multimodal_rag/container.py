@@ -7,11 +7,11 @@ from dependency_injector import containers, providers
 from elasticsearch import AsyncElasticsearch
 from elastic_transport.client_utils import DEFAULT
 
-from multimodal_rag.frameworks.elasticsearch_config import ElasticsearchConfig
+from multimodal_rag.adaptors.elasticsearch.elasticsearch_config import ElasticsearchConfig
 from multimodal_rag.frameworks.logging_config import LoggerFactory
 from multimodal_rag.frameworks.google_genai_embedding_service import GoogleGenAIEmbeddingService
 from multimodal_rag.frameworks.google_genai_llm_service import GoogleGenAILLMService
-from multimodal_rag.adaptors.elasticsearch_adaptor import ElasticsearchDocumentAdaptor
+from multimodal_rag.adaptors.elasticsearch.elasticsearch_adaptor import ElasticsearchDocumentAdaptor
 from multimodal_rag.usecases.document_indexing import DocumentIndexingUseCase, DocumentSearchUseCase
 
 
