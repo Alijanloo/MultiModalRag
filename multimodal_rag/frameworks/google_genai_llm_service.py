@@ -156,15 +156,22 @@ Ensure your response is valid JSON and follows the schema exactly."""
                     model=model_name, contents=structured_prompt, **kwargs
                 )
 
-                generated_text = response.text
+                generated_text = response.text.strip()
 
-                # Try to parse JSON response
                 try:
+
+                    if "```json" in generated_text:
+                        json_start = generated_text.find("```json") + 7
+                        json_end = generated_text.find("```", json_start)
+                        generated_text = generated_text[json_start:json_end].strip()
+                    elif "```" in generated_text:
+                        json_start = generated_text.find("```") + 3
+                        json_end = generated_text.rfind("```")
+                        generated_text = generated_text[json_start:json_end].strip()
+
                     structured_response = json.loads(generated_text)
-                    logger.info("Successfully generated structured content")
                     return structured_response
                 except json.JSONDecodeError:
-                    # If JSON parsing fails, return the text in a structured format
                     logger.warning(
                         "Response was not valid JSON, returning as text field"
                     )
