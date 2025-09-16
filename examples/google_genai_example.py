@@ -7,7 +7,7 @@ integrated through the dependency injection container.
 
 import asyncio
 from multimodal_rag import logger
-from multimodal_rag.containers.container import ApplicationContainer
+from multimodal_rag.container import ApplicationContainer
 
 
 async def main():
