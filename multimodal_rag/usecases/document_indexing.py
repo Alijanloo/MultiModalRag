@@ -16,10 +16,7 @@ from multimodal_rag.usecases.interfaces.embedding_service import (
 from .dtos import (
     IndexDocumentResponse,
     IndexChunkResponse,
-    SearchRequest,
-    SearchResponse,
     BulkIndexResponse,
-    GetDocumentResponse,
 )
 from ..entities.document import DoclingDocument, DocChunk
 
@@ -90,8 +87,8 @@ class DocumentIndexingUseCase:
             document_id = str(uuid.uuid4())
         
         if generate_embeddings and self._embedding_service:
-            # Process chunks in batches of 100
-            batch_size = 100
+            # Process chunks in batches of 60
+            batch_size = 60
             for i in range(0, len(chunks), batch_size):
                 batch_chunks = chunks[i:i + batch_size]
                 texts = [chunk.text for chunk in batch_chunks]
@@ -206,106 +203,3 @@ class DocumentIndexingUseCase:
         
         logger.info(f"Bulk indexing completed. Processed {len(responses)} documents.")
         return responses
-
-
-class DocumentSearchUseCase:
-    """Use case for document search and retrieval operations."""
-    
-    def __init__(
-        self,
-        document_repository: IDocumentIndexRepository,
-        embedding_service: Optional[EmbeddingServiceInterface] = None
-    ):
-        self._document_repository = document_repository
-        self._embedding_service = embedding_service
-    
-    async def search_chunks_by_text(
-        self,
-        query: str,
-        size: int = 10,
-        filters: Optional[dict] = None,
-        index_name: Optional[str] = None
-    ) -> SearchResponse:
-        """Search chunks using text query."""
-        request = SearchRequest(
-            query=query,
-            size=size,
-            filters=filters,
-            index_name=index_name
-        )
-        
-        return await self._document_repository.search_chunks(request)
-    
-    async def search_chunks_by_vector(
-        self,
-        query_text: str,
-        size: int = 10,
-        filters: Optional[dict] = None,
-        index_name: Optional[str] = None
-    ) -> SearchResponse:
-        """Search chunks using vector similarity."""
-        if not self._embedding_service:
-            raise ValueError("Embedding service is required for vector search")
-        
-        vector = await self._embedding_service.embed_single(query_text)
-        
-        request = SearchRequest(
-            vector=vector,
-            size=size,
-            filters=filters,
-            index_name=index_name
-        )
-        
-        return await self._document_repository.search_chunks(request)
-    
-    async def search_chunks_hybrid(
-        self,
-        query: str,
-        size: int = 10,
-        filters: Optional[dict] = None,
-        index_name: Optional[str] = None
-    ) -> SearchResponse:
-        """Search chunks using both text and vector similarity."""
-        if not self._embedding_service:
-            # Fallback to text search only
-            return await self.search_chunks_by_text(query, size, filters, index_name)
-        
-        vector = await self._embedding_service.embed_single(query)
-        
-        request = SearchRequest(
-            query=query,
-            vector=vector,
-            size=size,
-            filters=filters,
-            index_name=index_name
-        )
-        
-        return await self._document_repository.search_chunks(request)
-    
-    async def get_document(
-        self,
-        document_id: str,
-        index_name: Optional[str] = None
-    ) -> GetDocumentResponse:
-        """Retrieve a document by ID."""
-        return await self._document_repository.get_document(
-            document_id=document_id,
-            index_name=index_name
-        )
-    
-    async def search_documents(
-        self,
-        query: str,
-        size: int = 10,
-        filters: Optional[dict] = None,
-        index_name: Optional[str] = None
-    ) -> SearchResponse:
-        """Search documents using text query."""
-        request = SearchRequest(
-            query=query,
-            size=size,
-            filters=filters,
-            index_name=index_name
-        )
-        
-        return await self._document_repository.search_documents(request)

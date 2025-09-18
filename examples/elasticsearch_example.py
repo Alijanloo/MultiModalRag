@@ -8,11 +8,9 @@ from typing import List
 from docling_core.types.doc.document import DoclingDocument as DLDocument
 
 from multimodal_rag.entities.document import DoclingDocument, DocChunk
-from multimodal_rag.containers import ApplicationContainer
-from multimodal_rag.usecases.document_indexing import (
-    DocumentIndexingUseCase,
-    DocumentSearchUseCase,
-)
+from multimodal_rag.container import ApplicationContainer
+from multimodal_rag.usecases.document_indexing import DocumentIndexingUseCase
+from multimodal_rag.usecases.document_search import DocumentSearchUseCase
 
 
 async def load_sample_data() -> tuple[DoclingDocument, List[DocChunk]]:

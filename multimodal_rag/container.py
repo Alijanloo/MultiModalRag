@@ -12,7 +12,8 @@ from multimodal_rag.frameworks.logging_config import LoggerFactory
 from multimodal_rag.frameworks.google_genai_embedding_service import GoogleGenAIEmbeddingService
 from multimodal_rag.frameworks.google_genai_llm_service import GoogleGenAILLMService
 from multimodal_rag.adaptors.elasticsearch.elasticsearch_adaptor import ElasticsearchDocumentAdaptor
-from multimodal_rag.usecases.document_indexing import DocumentIndexingUseCase, DocumentSearchUseCase
+from multimodal_rag.usecases.document_indexing import DocumentIndexingUseCase
+from multimodal_rag.usecases.document_search import DocumentSearchUseCase
 
 
 @asynccontextmanager
@@ -96,7 +97,6 @@ class ApplicationContainer(containers.DeclarativeContainer):
         GoogleGenAILLMService,
         api_keys=config.google_genai.api_keys,
         default_model=config.google_genai.default_llm_model,
-        embedding_dimensions=config.google_genai.embedding_dimensions,
     )
 
     # Use Cases

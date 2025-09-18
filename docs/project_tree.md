@@ -15,8 +15,9 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
   - `DocumentOrigin`: Document origin information
 
 #### Use Cases (`multimodal_rag/usecases/`)
-- `document_indexing.py`: Business logic for document operations
+- `document_indexing.py`: Business logic for document indexing
   - `DocumentIndexingUseCase`: Handles document and chunk indexing
+- `document_search.py`: Business logic for document search operations
   - `DocumentSearchUseCase`: Handles search and retrieval operations
 - `dtos.py`: Data Transfer Objects for external API boundaries
   - `SearchRequest`: External search API request
