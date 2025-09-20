@@ -53,7 +53,7 @@ async def index_documents(
         document=document,
         chunks=sample_chunks,
         document_id="sample_doc_1",
-        index_name="example_unified_index",
+        index_name="example_index",
         generate_embeddings=False,  # Using mock vectors
     )
 
@@ -70,7 +70,7 @@ async def search_documents(
 
     # Search chunks by text
     search_results = await search_use_case.search_chunks_by_text(
-        query="occupational disease", size=5, index_name="example_unified_index"
+        query="occupational disease", size=5, index_name="example_index"
     )
 
     print(f"📝 Text search results: {len(search_results.hits)} hits")
@@ -84,7 +84,7 @@ async def search_documents(
 
     # Get the original document
     doc_result = await search_use_case.get_document(
-        document_id="sample_doc_1", index_name="example_unified_index"
+        document_id="sample_doc_1", index_name="example_index"
     )
 
     if doc_result.found:
@@ -101,7 +101,7 @@ async def search_documents(
 
     # Search for documents
     doc_search_results = await search_use_case.search_documents(
-        query="comprehensive review", size=5, index_name="example_unified_index"
+        query="comprehensive review", size=5, index_name="example_index"
     )
 
     print(f"📄 Document search results: {len(doc_search_results.hits)} documents found")
@@ -121,7 +121,7 @@ async def initialize_system(
     # Get the document repository to initialize indices
     document_repository = await container.document_repository()
     await document_repository.initialize_indices()
-    print("✅ Elasticsearch unified index initialized")
+    print("✅ Elasticsearch index initialized")
 
 
 async def main():

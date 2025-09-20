@@ -16,7 +16,7 @@ class ElasticsearchConfig(BaseModel):
     ca_certs: Optional[str] = None
     
     # Index settings
-    index_name: str = Field(default="multimodal_index", description="Unified index for documents and chunks")
+    index_name: str = Field(default="multimodal_index", description="Index for documents and chunks")
     vector_dimensions: int = Field(default=1536, description="Dimension of embedding vectors")
     
     # Index configurations
@@ -45,7 +45,7 @@ class ElasticsearchConfig(BaseModel):
         return config
     
     def get_index_settings(self) -> Dict[str, Any]:
-        """Get settings for the unified index."""
+        """Get settings for the index."""
         return {
             "settings": {
                 "number_of_shards": self.shards,

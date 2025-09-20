@@ -24,14 +24,11 @@ logger = logging.getLogger(__name__)
 class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
     """Elasticsearch implementation of document indexing repository."""
 
-    # Default index name for both documents and chunks
     DEFAULT_INDEX = "multimodal_index"
 
-    # Unified mapping for both documents and chunks with separate field structures
-    UNIFIED_MAPPING = {
+    MAPPING = {
         "mappings": {
             "properties": {
-                # Document fields - nested under "document" field
                 "document": {
                     "properties": {
                         "schema_name": {"type": "keyword"},
@@ -55,7 +52,6 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                         "pages": {"type": "object", "enabled": False},
                     }
                 },
-                # Chunk fields - nested under "chunk" field
                 "chunk": {
                     "properties": {
                         "text": {
@@ -108,7 +104,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
 
         Args:
             elasticsearch_client: AsyncElasticsearch client instance
-            index_name: Name of the unified index for documents and chunks
+            index_name: Name of the index for documents and chunks
             vector_dimensions: Dimension of the vector embeddings
         """
         self._es = elasticsearch_client
@@ -116,19 +112,18 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         self._vector_dimensions = vector_dimensions
 
         # Update mapping with correct vector dimensions
-        self.UNIFIED_MAPPING["mappings"]["properties"]["chunk"]["properties"]["vector"][
+        self.MAPPING["mappings"]["properties"]["chunk"]["properties"]["vector"][
             "dims"
         ] = vector_dimensions
 
     async def initialize_indices(self) -> bool:
         """Initialize the Elasticsearch index with proper mapping."""
         try:
-            # Create unified index
             if not await self._es.indices.exists(index=self._index_name):
                 await self._es.indices.create(
-                    index=self._index_name, body=self.UNIFIED_MAPPING
+                    index=self._index_name, body=self.MAPPING
                 )
-                logger.info(f"Created unified index: {self._index_name}")
+                logger.info(f"Created index: {self._index_name}")
 
             return True
         except Exception as e:
@@ -146,7 +141,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             index_name = index_name or self._index_name
 
             # Structure document data under "document" field
-            document_data = {"document": document.model_dump()}
+            document_data = {"document": document.model_dump(mode="json")}
 
             result = await self._es.index(
                 index=index_name, id=document_id, document=document_data
@@ -159,9 +154,14 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                 document_id=document_id, success=success, message=message
             )
         except Exception as e:
-            logger.error(f"Failed to index document {document_id}: {e}")
+            error_msg = f"Failed to index document {document_id}: {e}"
+            if hasattr(e, 'meta') and hasattr(e.meta, 'status'):
+                if e.meta.status == 413:
+                    error_msg += " - Document is too large. Consider chunking the document or increasing Elasticsearch's http.max_content_length setting."
+                error_msg += f" (HTTP {e.meta.status})"
+            logger.error(error_msg)
             return IndexDocumentResponse(
-                document_id=document_id, success=False, message=str(e)
+                document_id=document_id, success=False, message=error_msg
             )
 
     async def index_chunk(

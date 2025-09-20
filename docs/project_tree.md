@@ -32,7 +32,6 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
   - Direct entity passing for internal operations
   - Methods accept entities like `DocChunk`, `DoclingDocument` directly
   - Returns DTO responses for consistency with external boundaries
-  - Unified index approach storing both documents and chunks
   - Separate field structures for documents (`document.*`) and chunks (`chunk.*`)
   - Vector similarity search support
   - Hybrid text and vector search capabilities
@@ -48,29 +47,16 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
 - Centralized location for application configuration classes
 - Environment-specific settings and constants
 
-### Index Structure
-
-The Elasticsearch adaptor uses a **unified index** approach where both documents and chunks are stored in the same index with:
-
-- **Common fields**: `type`, `created_at`, `updated_at`
-- **Document fields**: Nested under `document.*`
-  - `document.name`, `document.origin`, `document.schema_name`, etc.
-  - Complete document structure preserved
-- **Chunk fields**: Nested under `chunk.*`
-  - `chunk.text`, `chunk.meta`, `chunk.vector`, `chunk.document_id`
-  - Vector embeddings for semantic search
-  - Reference to parent document via `chunk.document_id`
 
 ### Key Features
 
 1. **Clean Architecture**: Separation of concerns with dependency inversion
-2. **Unified Index**: Single Elasticsearch index for both document types
-3. **Type Safety**: Pydantic models throughout for validation
-4. **Vector Search**: Dense vector support for semantic similarity with Google GenAI embeddings
-5. **Hybrid Search**: Combined text and vector search capabilities
-6. **Document References**: Chunks maintain references to parent documents
-7. **LLM Integration**: Google GenAI for content generation and Q&A
-8. **Dependency Injection**: Proper DI container setup for all services
+2. **Type Safety**: Pydantic models throughout for validation
+3. **Vector Search**: Dense vector support for semantic similarity with Google GenAI embeddings
+4. **Hybrid Search**: Combined text and vector search capabilities
+5. **Document References**: Chunks maintain references to parent documents
+6. **LLM Integration**: Google GenAI for content generation and Q&A
+7. **Dependency Injection**: Proper DI container setup for all services
 
 ### Usage Examples
 
