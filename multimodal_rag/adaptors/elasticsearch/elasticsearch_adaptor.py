@@ -1,23 +1,13 @@
 """Elasticsearch adaptor for document indexing and search."""
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.exceptions import NotFoundError
 
 from ...usecases.interfaces.document_repository import IDocumentIndexRepository
-from ...usecases.dtos import (
-    IndexDocumentResponse,
-    IndexChunkResponse,
-    IndexTextResponse,
-    IndexPictureResponse,
-    IndexTableResponse,
-    SearchRequest,
-    SearchResponse,
-    SearchHit,
-    GetDocumentResponse,
-)
+
 from ...entities.document import (
     DoclingDocument,
     DocChunk,
@@ -190,7 +180,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         document: DoclingDocument,
         document_id: str,
         index_name: Optional[str] = None,
-    ) -> IndexDocumentResponse:
+    ) -> bool:
         """Index a single document."""
         try:
             index_name = index_name or self._index_name
@@ -202,11 +192,10 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             )
 
             success = result.get("result") in ["created", "updated"]
-            message = f"Document {result.get('result', 'processed')}"
+            if not success:
+                logger.error(f"Failed to index document {document_id}: {result}")
 
-            return IndexDocumentResponse(
-                document_id=document_id, success=success, message=message
-            )
+            return success
         except Exception as e:
             error_msg = f"Failed to index document {document_id}: {e}"
             if hasattr(e, "meta") and hasattr(e.meta, "status"):
@@ -214,9 +203,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                     error_msg += " - Document is too large. Consider chunking the document or increasing Elasticsearch's http.max_content_length setting."
                 error_msg += f" (HTTP {e.meta.status})"
             logger.error(error_msg)
-            return IndexDocumentResponse(
-                document_id=document_id, success=False, message=error_msg
-            )
+            return False
 
     async def index_chunk(
         self,
@@ -224,7 +211,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         chunk_id: str,
         document_id: Optional[str] = None,
         index_name: Optional[str] = None,
-    ) -> IndexChunkResponse:
+    ) -> bool:
         """Index a single chunk."""
         try:
             index_name = index_name or self._index_name
@@ -236,18 +223,17 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             )
 
             success = result.get("result") in ["created", "updated"]
-            message = f"Chunk {result.get('result', 'processed')}"
+            if not success:
+                logger.error(f"Failed to index chunk {chunk_id}: {result}")
 
-            return IndexChunkResponse(
-                chunk_id=chunk_id, success=success, message=message
-            )
+            return success
         except Exception as e:
             logger.error(f"Failed to index chunk {chunk_id}: {e}")
-            return IndexChunkResponse(chunk_id=chunk_id, success=False, message=str(e))
+            return False
 
     async def index_text(
         self, text: DocumentText, index_name: Optional[str] = None
-    ) -> IndexTextResponse:
+    ) -> bool:
         """Index a single text element."""
         try:
             index_name = index_name or self._index_name
@@ -259,20 +245,17 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             )
 
             success = result.get("result") in ["created", "updated"]
-            message = f"Text {result.get('result', 'processed')}"
+            if not success:
+                logger.error(f"Failed to index text {text.text_id}: {result}")
 
-            return IndexTextResponse(
-                text_id=text.text_id, success=success, message=message
-            )
+            return success
         except Exception as e:
             logger.error(f"Failed to index text {text.text_id}: {e}")
-            return IndexTextResponse(
-                text_id=text.text_id, success=False, message=str(e)
-            )
+            return False
 
     async def index_picture(
         self, picture: DocumentPicture, index_name: Optional[str] = None
-    ) -> IndexPictureResponse:
+    ) -> bool:
         """Index a single picture element."""
         try:
             index_name = index_name or self._index_name
@@ -284,20 +267,17 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             )
 
             success = result.get("result") in ["created", "updated"]
-            message = f"Picture {result.get('result', 'processed')}"
+            if not success:
+                logger.error(f"Failed to index picture {picture.picture_id}: {result}")
 
-            return IndexPictureResponse(
-                picture_id=picture.picture_id, success=success, message=message
-            )
+            return success
         except Exception as e:
             logger.error(f"Failed to index picture {picture.picture_id}: {e}")
-            return IndexPictureResponse(
-                picture_id=picture.picture_id, success=False, message=str(e)
-            )
+            return False
 
     async def index_table(
         self, table: DocumentTable, index_name: Optional[str] = None
-    ) -> IndexTableResponse:
+    ) -> bool:
         """Index a single table element."""
         try:
             index_name = index_name or self._index_name
@@ -309,39 +289,33 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             )
 
             success = result.get("result") in ["created", "updated"]
-            message = f"Table {result.get('result', 'processed')}"
+            if not success:
+                logger.error(f"Failed to index table {table.table_id}: {result}")
 
-            return IndexTableResponse(
-                table_id=table.table_id, success=success, message=message
-            )
+            return success
         except Exception as e:
             logger.error(f"Failed to index table {table.table_id}: {e}")
-            return IndexTableResponse(
-                table_id=table.table_id, success=False, message=str(e)
-            )
+            return False
 
     async def get_document(
         self, document_id: str, index_name: Optional[str] = None
-    ) -> GetDocumentResponse:
+    ) -> Optional[DoclingDocument]:
         """Get a document by ID."""
         try:
             index_name = index_name or self._index_name
 
             result = await self._es.get(index=index_name, id=document_id)
 
-            return GetDocumentResponse(
-                document_id=document_id, found=True, source=result.get("_source")
-            )
+            if result and "_source" in result and "document" in result["_source"]:
+                return DoclingDocument.from_elastic_hit(result["_source"])
+
+            return None
 
         except NotFoundError:
-            return GetDocumentResponse(
-                document_id=document_id, found=False, source=None
-            )
+            return None
         except Exception as e:
             logger.error(f"Failed to get document {document_id}: {e}")
-            return GetDocumentResponse(
-                document_id=document_id, found=False, source=None
-            )
+            return None
 
     async def get_picture(
         self, document_id: str, picture_id: str, index_name: Optional[str] = None
@@ -374,18 +348,25 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             )
             return None
 
-    async def search_chunks(self, request: SearchRequest) -> SearchResponse:
+    async def search_chunks(
+        self,
+        query: Optional[str] = None,
+        vector: Optional[List[float]] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        size: int = 10,
+        index_name: Optional[str] = None,
+    ) -> Tuple[List[DocChunk], int]:
         """Search chunks using text or vector similarity."""
         try:
-            index_name = request.index_name or self._index_name
+            index_name = index_name or self._index_name
 
             # Build query for chunks
-            query = self._build_chunk_search_query(request)
+            query_dict = self._build_chunk_search_query(query, vector, filters, size)
 
             search_params = {
                 "index": index_name,
-                "size": request.size,
-                "query": query.get("query"),
+                "size": size,
+                "query": query_dict.get("query"),
                 "highlight": {
                     "fields": {
                         "chunk.text": {"fragment_size": 150, "number_of_fragments": 3}
@@ -394,38 +375,36 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             }
 
             # Add vector search if provided
-            if request.vector and "knn" in query:
-                search_params["knn"] = query["knn"]
+            if vector and "knn" in query_dict:
+                search_params["knn"] = query_dict["knn"]
 
             result = await self._es.search(**search_params)
 
-            hits = []
+            chunks = []
             for hit in result["hits"]["hits"]:
-                search_hit = SearchHit(
-                    id=hit["_id"],
-                    score=hit["_score"],
-                    source=hit["_source"],
-                    highlight=hit.get("highlight"),
-                )
-                hits.append(search_hit)
+                if "chunk" in hit["_source"]:
+                    chunk = DocChunk.from_elastic_hit(hit["_source"])
+                    chunks.append(chunk)
 
-            return SearchResponse(
-                hits=hits,
-                total=result["hits"]["total"]["value"],
-                max_score=result["hits"]["max_score"],
-            )
+            return chunks, result["hits"]["total"]["value"]
 
         except Exception as e:
             logger.error(f"Search chunks failed: {e}")
-            return SearchResponse(hits=[], total=0, max_score=None)
+            return [], 0
 
-    async def search_documents(self, request: SearchRequest) -> SearchResponse:
+    async def search_documents(
+        self,
+        query: str,
+        filters: Optional[Dict[str, Any]] = None,
+        size: int = 10,
+        index_name: Optional[str] = None,
+    ) -> Tuple[List[DoclingDocument], int]:
         """Search documents using text query."""
         try:
-            index_name = request.index_name or self._index_name
+            index_name = index_name or self._index_name
 
             # Build text query for documents
-            query = {
+            query_dict = {
                 "bool": {
                     "must": [
                         {"exists": {"field": "document"}},
@@ -435,7 +414,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                                     {
                                         "match": {
                                             "document.name": {
-                                                "query": request.query,
+                                                "query": query,
                                                 "boost": 2.0,
                                             }
                                         }
@@ -443,7 +422,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                                     {
                                         "match": {
                                             "document.origin.filename": {
-                                                "query": request.query,
+                                                "query": query,
                                                 "boost": 1.5,
                                             }
                                         }
@@ -456,13 +435,13 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             }
 
             # Add filters if provided
-            if request.filters:
-                query["bool"]["filter"] = self._build_filters(request.filters)
+            if filters:
+                query_dict["bool"]["filter"] = self._build_filters(filters)
 
             result = await self._es.search(
                 index=index_name,
-                size=request.size,
-                query=query,
+                size=size,
+                query=query_dict,
                 highlight={
                     "fields": {
                         "document.name": {
@@ -477,25 +456,17 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                 },
             )
 
-            hits = []
+            documents = []
             for hit in result["hits"]["hits"]:
-                search_hit = SearchHit(
-                    id=hit["_id"],
-                    score=hit["_score"],
-                    source=hit["_source"],
-                    highlight=hit.get("highlight"),
-                )
-                hits.append(search_hit)
+                if "document" in hit["_source"]:
+                    document = DoclingDocument.from_elastic_hit(hit["_source"])
+                    documents.append(document)
 
-            return SearchResponse(
-                hits=hits,
-                total=result["hits"]["total"]["value"],
-                max_score=result["hits"]["max_score"],
-            )
+            return documents, result["hits"]["total"]["value"]
 
         except Exception as e:
             logger.error(f"Search documents failed: {e}")
-            return SearchResponse(hits=[], total=0, max_score=None)
+            return [], 0
 
     async def delete_document(
         self, document_id: str, index_name: Optional[str] = None
@@ -531,25 +502,27 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             logger.error(f"Failed to delete chunk {chunk_id}: {e}")
             return False
 
-    def _build_chunk_search_query(self, request: SearchRequest) -> Dict[str, Any]:
+    def _build_chunk_search_query(
+        self,
+        query: Optional[str] = None,
+        vector: Optional[List[float]] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        size: int = 10,
+    ) -> Dict[str, Any]:
         """Build search query for chunks."""
         query_parts = {}
 
         # Text search with field existence filter for chunks
-        if request.query:
+        if query:
             text_query = {
                 "bool": {
                     "must": [{"exists": {"field": "chunk"}}],
                     "should": [
-                        {
-                            "match": {
-                                "chunk.text": {"query": request.query, "boost": 1.0}
-                            }
-                        },
+                        {"match": {"chunk.text": {"query": query, "boost": 1.0}}},
                         {
                             "match": {
                                 "chunk.meta.headings": {
-                                    "query": request.query,
+                                    "query": query,
                                     "boost": 1.5,
                                 }
                             }
@@ -559,24 +532,24 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             }
 
             # Add filters if provided
-            if request.filters:
-                text_query["bool"]["filter"] = self._build_filters(request.filters)
+            if filters:
+                text_query["bool"]["filter"] = self._build_filters(filters)
 
             query_parts["query"] = text_query
 
         # Vector search
-        if request.vector:
+        if vector:
             knn_query = {
                 "field": "chunk.vector",
-                "query_vector": request.vector,
-                "k": request.size,
-                "num_candidates": request.size * 10,
+                "query_vector": vector,
+                "k": size,
+                "num_candidates": size * 10,
                 "filter": {"exists": {"field": "chunk"}},
             }
 
             # Add additional filters to KNN if provided
-            if request.filters:
-                additional_filters = self._build_filters(request.filters)
+            if filters:
+                additional_filters = self._build_filters(filters)
                 knn_query["filter"] = {
                     "bool": {
                         "must": [{"exists": {"field": "chunk"}}, *additional_filters]
@@ -586,20 +559,20 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             query_parts["knn"] = knn_query
 
         # If both text and vector, create hybrid search
-        if request.query and request.vector:
+        if query and vector:
             # For hybrid search, we use the KNN with a filter that includes the text match
             hybrid_filter = {
                 "bool": {
                     "must": [{"exists": {"field": "chunk"}}],
                     "should": [
-                        {"match": {"chunk.text": request.query}},
-                        {"match": {"chunk.meta.headings": request.query}},
+                        {"match": {"chunk.text": query}},
+                        {"match": {"chunk.meta.headings": query}},
                     ],
                 }
             }
 
-            if request.filters:
-                existing_filters = self._build_filters(request.filters)
+            if filters:
+                existing_filters = self._build_filters(filters)
                 hybrid_filter["bool"]["must"].extend(existing_filters)
 
             query_parts["knn"]["filter"] = hybrid_filter

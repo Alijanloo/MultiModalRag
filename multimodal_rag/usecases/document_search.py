@@ -1,17 +1,13 @@
 """Use cases for document indexing and retrieval operations."""
 
-from typing import Optional
+from typing import Optional, List, Tuple
 
 from multimodal_rag.frameworks.logging_config import get_logger
 from .interfaces.document_repository import IDocumentIndexRepository
 from multimodal_rag.usecases.interfaces.embedding_service import (
     EmbeddingServiceInterface,
 )
-from .dtos import (
-    SearchRequest,
-    SearchResponse,
-    GetDocumentResponse,
-)
+from ..entities.document import DocChunk, DoclingDocument
 
 logger = get_logger(__name__)
 
@@ -33,16 +29,14 @@ class DocumentSearchUseCase:
         size: int = 10,
         filters: Optional[dict] = None,
         index_name: Optional[str] = None
-    ) -> SearchResponse:
+    ) -> Tuple[List[DocChunk], int]:
         """Search chunks using text query."""
-        request = SearchRequest(
+        return await self._document_repository.search_chunks(
             query=query,
             size=size,
             filters=filters,
             index_name=index_name
         )
-        
-        return await self._document_repository.search_chunks(request)
     
     async def search_chunks_by_vector(
         self,
@@ -50,21 +44,19 @@ class DocumentSearchUseCase:
         size: int = 10,
         filters: Optional[dict] = None,
         index_name: Optional[str] = None
-    ) -> SearchResponse:
+    ) -> Tuple[List[DocChunk], int]:
         """Search chunks using vector similarity."""
         if not self._embedding_service:
             raise ValueError("Embedding service is required for vector search")
         
         vector = await self._embedding_service.embed_single(query_text)
         
-        request = SearchRequest(
+        return await self._document_repository.search_chunks(
             vector=vector,
             size=size,
             filters=filters,
             index_name=index_name
         )
-        
-        return await self._document_repository.search_chunks(request)
     
     async def search_chunks_hybrid(
         self,
@@ -72,7 +64,7 @@ class DocumentSearchUseCase:
         size: int = 10,
         filters: Optional[dict] = None,
         index_name: Optional[str] = None
-    ) -> SearchResponse:
+    ) -> Tuple[List[DocChunk], int]:
         """Search chunks using both text and vector similarity."""
         if not self._embedding_service:
             # Fallback to text search only
@@ -80,21 +72,19 @@ class DocumentSearchUseCase:
         
         vector = await self._embedding_service.embed_single(query)
         
-        request = SearchRequest(
+        return await self._document_repository.search_chunks(
             query=query,
             vector=vector,
             size=size,
             filters=filters,
             index_name=index_name
         )
-        
-        return await self._document_repository.search_chunks(request)
     
     async def get_document(
         self,
         document_id: str,
         index_name: Optional[str] = None
-    ) -> GetDocumentResponse:
+    ) -> Optional[DoclingDocument]:
         """Retrieve a document by ID."""
         return await self._document_repository.get_document(
             document_id=document_id,
@@ -107,13 +97,11 @@ class DocumentSearchUseCase:
         size: int = 10,
         filters: Optional[dict] = None,
         index_name: Optional[str] = None
-    ) -> SearchResponse:
+    ) -> Tuple[List[DoclingDocument], int]:
         """Search documents using text query."""
-        request = SearchRequest(
+        return await self._document_repository.search_documents(
             query=query,
             size=size,
             filters=filters,
             index_name=index_name
         )
-        
-        return await self._document_repository.search_documents(request)
