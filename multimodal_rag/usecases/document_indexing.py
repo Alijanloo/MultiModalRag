@@ -130,65 +130,66 @@ class DocumentIndexingUseCase:
             logger.error(error_msg)
             errors.append(error_msg)
 
-        # Index texts
-        for text in texts:
+        # Use bulk methods for better performance
+        # Bulk index texts
+        if texts:
             try:
-                if await self._document_repository.index_text(text, index_name):
-                    total_indexed += 1
-                else:
-                    total_failed += 1
-                    errors.append(f"Failed to index text {text.text_id}")
+                indexed_count, failed_count, bulk_errors = (
+                    await self._document_repository.bulk_index_texts(texts, index_name)
+                )
+                total_indexed += indexed_count
+                total_failed += failed_count
+                errors.extend(bulk_errors)
             except Exception as e:
-                total_failed += 1
-                error_msg = f"Failed to index text {text.text_id}: {e}"
+                total_failed += len(texts)
+                error_msg = f"Failed to bulk index texts: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)
 
-        # Index pictures
-        for picture in pictures:
+        # Bulk index pictures
+        if pictures:
             try:
-                if await self._document_repository.index_picture(picture, index_name):
-                    total_indexed += 1
-                else:
-                    total_failed += 1
-                    errors.append(f"Failed to index picture {picture.picture_id}")
+                indexed_count, failed_count, bulk_errors = (
+                    await self._document_repository.bulk_index_pictures(pictures, index_name)
+                )
+                total_indexed += indexed_count
+                total_failed += failed_count
+                errors.extend(bulk_errors)
             except Exception as e:
-                total_failed += 1
-                error_msg = f"Failed to index picture {picture.picture_id}: {e}"
+                total_failed += len(pictures)
+                error_msg = f"Failed to bulk index pictures: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)
 
-        # Index tables
-        for table in tables:
+        # Bulk index tables
+        if tables:
             try:
-                if await self._document_repository.index_table(table, index_name):
-                    total_indexed += 1
-                else:
-                    total_failed += 1
-                    errors.append(f"Failed to index table {table.table_id}")
+                indexed_count, failed_count, bulk_errors = (
+                    await self._document_repository.bulk_index_tables(tables, index_name)
+                )
+                total_indexed += indexed_count
+                total_failed += failed_count
+                errors.extend(bulk_errors)
             except Exception as e:
-                total_failed += 1
-                error_msg = f"Failed to index table {table.table_id}: {e}"
+                total_failed += len(tables)
+                error_msg = f"Failed to bulk index tables: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)
 
-        # Index chunks
-        for chunk in chunks:
+        # Bulk index chunks
+        if chunks:
             try:
-                chunk_id = str(uuid.uuid4())
-                if await self._document_repository.index_chunk(
-                    chunk=chunk,
-                    chunk_id=chunk_id,
-                    document_id=document_id,
-                    index_name=index_name,
-                ):
-                    total_indexed += 1
-                else:
-                    total_failed += 1
-                    errors.append(f"Failed to index chunk {chunk_id}")
+                indexed_count, failed_count, bulk_errors = (
+                    await self._document_repository.bulk_index_chunks(
+                        chunks, document_id, index_name
+                    )
+                )
+                total_indexed += indexed_count
+                total_failed += failed_count
+                errors.extend(bulk_errors)
             except Exception as e:
-                total_failed += 1
-                error_msg = f"Failed to index chunk: {e}"
+                total_failed += len(chunks)
+                error_msg = f"Failed to bulk index chunks: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)
 

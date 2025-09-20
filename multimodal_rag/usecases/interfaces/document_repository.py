@@ -58,6 +58,43 @@ class IDocumentIndexRepository(ABC):
         pass
 
     @abstractmethod
+    async def bulk_index_chunks(
+        self,
+        chunks: List[DocChunk],
+        document_id: str,
+        index_name: Optional[str] = None,
+    ) -> Tuple[int, int, List[str]]:
+        """Bulk index multiple chunks. Returns (indexed_count, failed_count, errors)."""
+        pass
+
+    @abstractmethod
+    async def bulk_index_texts(
+        self,
+        texts: List[DocumentText],
+        index_name: Optional[str] = None,
+    ) -> Tuple[int, int, List[str]]:
+        """Bulk index multiple text elements. Returns (indexed_count, failed_count, errors)."""
+        pass
+
+    @abstractmethod
+    async def bulk_index_pictures(
+        self,
+        pictures: List[DocumentPicture],
+        index_name: Optional[str] = None,
+    ) -> Tuple[int, int, List[str]]:
+        """Bulk index multiple picture elements. Returns (indexed_count, failed_count, errors)."""
+        pass
+
+    @abstractmethod
+    async def bulk_index_tables(
+        self,
+        tables: List[DocumentTable],
+        index_name: Optional[str] = None,
+    ) -> Tuple[int, int, List[str]]:
+        """Bulk index multiple table elements. Returns (indexed_count, failed_count, errors)."""
+        pass
+
+    @abstractmethod
     async def get_picture(
         self, document_id: str, picture_id: str, index_name: Optional[str] = None
     ) -> Optional[DocumentPicture]:

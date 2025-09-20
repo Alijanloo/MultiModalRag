@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Any, Tuple
 
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.exceptions import NotFoundError
+from elasticsearch.helpers import async_bulk
 
 from ...usecases.interfaces.document_repository import IDocumentIndexRepository
 
@@ -296,6 +297,204 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         except Exception as e:
             logger.error(f"Failed to index table {table.table_id}: {e}")
             return False
+
+    async def bulk_index_chunks(
+        self,
+        chunks: List[DocChunk],
+        document_id: str,
+        index_name: Optional[str] = None,
+    ) -> Tuple[int, int, List[str]]:
+        """Bulk index multiple chunks."""
+        index_name = index_name or self._index_name
+        indexed_count = 0
+        failed_count = 0
+        errors = []
+
+        actions = []
+        for i, chunk in enumerate(chunks):
+            try:
+                chunk_id = f"{document_id}_chunk_{i}"
+                chunk_data = chunk.to_elastic_data(document_id=document_id)
+                
+                action = {
+                    "_index": index_name,
+                    "_id": chunk_id,
+                    "_source": chunk_data
+                }
+                actions.append(action)
+            except Exception as e:
+                failed_count += 1
+                error_msg = f"Failed to prepare chunk {i}: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        if actions:
+            try:
+                results = await async_bulk(self._es, actions, raise_on_error=False)
+                
+                for success, info in results:
+                    if success:
+                        indexed_count += 1
+                    else:
+                        failed_count += 1
+                        error_msg = f"Bulk index error: {info}"
+                        logger.error(error_msg)
+                        errors.append(error_msg)
+                        
+            except Exception as e:
+                failed_count += len(actions)
+                error_msg = f"Bulk indexing failed: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        return indexed_count, failed_count, errors
+
+    async def bulk_index_texts(
+        self,
+        texts: List[DocumentText],
+        index_name: Optional[str] = None,
+    ) -> Tuple[int, int, List[str]]:
+        """Bulk index multiple text elements."""
+        index_name = index_name or self._index_name
+        indexed_count = 0
+        failed_count = 0
+        errors = []
+
+        actions = []
+        for text in texts:
+            try:
+                text_data = text.to_elastic_data()
+                
+                action = {
+                    "_index": index_name,
+                    "_id": text.text_id,
+                    "_source": text_data
+                }
+                actions.append(action)
+            except Exception as e:
+                failed_count += 1
+                error_msg = f"Failed to prepare text {text.text_id}: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        if actions:
+            try:
+                results = await async_bulk(self._es, actions, raise_on_error=False)
+                
+                for success, info in results:
+                    if success:
+                        indexed_count += 1
+                    else:
+                        failed_count += 1
+                        error_msg = f"Bulk index error: {info}"
+                        logger.error(error_msg)
+                        errors.append(error_msg)
+                        
+            except Exception as e:
+                failed_count += len(actions)
+                error_msg = f"Bulk indexing failed: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        return indexed_count, failed_count, errors
+
+    async def bulk_index_pictures(
+        self,
+        pictures: List[DocumentPicture],
+        index_name: Optional[str] = None,
+    ) -> Tuple[int, int, List[str]]:
+        """Bulk index multiple picture elements."""
+        index_name = index_name or self._index_name
+        indexed_count = 0
+        failed_count = 0
+        errors = []
+
+        actions = []
+        for picture in pictures:
+            try:
+                picture_data = picture.to_elastic_data()
+                
+                action = {
+                    "_index": index_name,
+                    "_id": picture.picture_id,
+                    "_source": picture_data
+                }
+                actions.append(action)
+            except Exception as e:
+                failed_count += 1
+                error_msg = f"Failed to prepare picture {picture.picture_id}: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        if actions:
+            try:
+                results = await async_bulk(self._es, actions, raise_on_error=False)
+                
+                for success, info in results:
+                    if success:
+                        indexed_count += 1
+                    else:
+                        failed_count += 1
+                        error_msg = f"Bulk index error: {info}"
+                        logger.error(error_msg)
+                        errors.append(error_msg)
+                        
+            except Exception as e:
+                failed_count += len(actions)
+                error_msg = f"Bulk indexing failed: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        return indexed_count, failed_count, errors
+
+    async def bulk_index_tables(
+        self,
+        tables: List[DocumentTable],
+        index_name: Optional[str] = None,
+    ) -> Tuple[int, int, List[str]]:
+        """Bulk index multiple table elements."""
+        index_name = index_name or self._index_name
+        indexed_count = 0
+        failed_count = 0
+        errors = []
+
+        actions = []
+        for table in tables:
+            try:
+                table_data = table.to_elastic_data()
+                
+                action = {
+                    "_index": index_name,
+                    "_id": table.table_id,
+                    "_source": table_data
+                }
+                actions.append(action)
+            except Exception as e:
+                failed_count += 1
+                error_msg = f"Failed to prepare table {table.table_id}: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        if actions:
+            try:
+                results = await async_bulk(self._es, actions, raise_on_error=False)
+                
+                for success, info in results:
+                    if success:
+                        indexed_count += 1
+                    else:
+                        failed_count += 1
+                        error_msg = f"Bulk index error: {info}"
+                        logger.error(error_msg)
+                        errors.append(error_msg)
+                        
+            except Exception as e:
+                failed_count += len(actions)
+                error_msg = f"Bulk indexing failed: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        return indexed_count, failed_count, errors
 
     async def get_document(
         self, document_id: str, index_name: Optional[str] = None
