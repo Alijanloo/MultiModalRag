@@ -20,6 +20,30 @@ class IndexChunkResponse(BaseModel):
     message: Optional[str] = None
 
 
+class IndexTextResponse(BaseModel):
+    """DTO for indexing a text element response."""
+    
+    text_id: str
+    success: bool
+    message: Optional[str] = None
+
+
+class IndexPictureResponse(BaseModel):
+    """DTO for indexing a picture element response."""
+    
+    picture_id: str
+    success: bool
+    message: Optional[str] = None
+
+
+class IndexTableResponse(BaseModel):
+    """DTO for indexing a table element response."""
+    
+    table_id: str
+    success: bool
+    message: Optional[str] = None
+
+
 class SearchRequest(BaseModel):
     """DTO for search request."""
     
@@ -45,15 +69,6 @@ class SearchResponse(BaseModel):
     hits: List[SearchHit]
     total: int
     max_score: Optional[float] = None
-
-
-class BulkIndexResponse(BaseModel):
-    """DTO for bulk indexing response."""
-    
-    document_responses: List[IndexDocumentResponse] = Field(default_factory=list)
-    chunk_responses: List[IndexChunkResponse] = Field(default_factory=list)
-    total_indexed: int
-    errors: List[str] = Field(default_factory=list)
 
 
 class GetDocumentResponse(BaseModel):

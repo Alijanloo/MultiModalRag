@@ -10,13 +10,15 @@ from ...usecases.interfaces.document_repository import IDocumentIndexRepository
 from ...usecases.dtos import (
     IndexDocumentResponse,
     IndexChunkResponse,
+    IndexTextResponse,
+    IndexPictureResponse,
+    IndexTableResponse,
     SearchRequest,
     SearchResponse,
     SearchHit,
-    BulkIndexResponse,
     GetDocumentResponse,
 )
-from ...entities.document import DoclingDocument, DocChunk
+from ...entities.document import DoclingDocument, DocChunk, DocumentText, DocumentPicture, DocumentTable
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +90,55 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                         "document_id": {
                             "type": "keyword"
                         },  # Reference to parent document
+                    }
+                },
+                "text": {
+                    "properties": {
+                        "text_id": {"type": "keyword"},
+                        "document_id": {"type": "keyword"},
+                        "text": {
+                            "type": "text",
+                            "analyzer": "standard",
+                            "fields": {
+                                "keyword": {"type": "keyword", "ignore_above": 256}
+                            },
+                        },
+                        "label": {"type": "keyword"},
+                        "level": {"type": "integer"},
+                        "orig": {"type": "text", "analyzer": "standard"},
+                        "parent_ref": {"type": "keyword"},
+                        "children_refs": {"type": "keyword"},
+                        "prov": {"type": "object", "enabled": False},
+                    }
+                },
+                "picture": {
+                    "properties": {
+                        "picture_id": {"type": "keyword"},
+                        "document_id": {"type": "keyword"},
+                        "label": {"type": "keyword"},
+                        "captions": {"type": "text", "analyzer": "standard"},
+                        "references": {"type": "keyword"},
+                        "footnotes": {"type": "keyword"},
+                        "parent_ref": {"type": "keyword"},
+                        "children_refs": {"type": "keyword"},
+                        "prov": {"type": "object", "enabled": False},
+                        "image": {"type": "object", "enabled": False},
+                        "annotations": {"type": "object", "enabled": False},
+                    }
+                },
+                "table": {
+                    "properties": {
+                        "table_id": {"type": "keyword"},
+                        "document_id": {"type": "keyword"},
+                        "label": {"type": "keyword"},
+                        "captions": {"type": "text", "analyzer": "standard"},
+                        "references": {"type": "keyword"},
+                        "footnotes": {"type": "keyword"},
+                        "parent_ref": {"type": "keyword"},
+                        "children_refs": {"type": "keyword"},
+                        "prov": {"type": "object", "enabled": False},
+                        "data": {"type": "object", "enabled": False},
+                        "annotations": {"type": "object", "enabled": False},
                     }
                 },
             }
@@ -202,113 +253,123 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             logger.error(f"Failed to index chunk {chunk_id}: {e}")
             return IndexChunkResponse(chunk_id=chunk_id, success=False, message=str(e))
 
-    async def bulk_index_document_with_chunks(
-        self,
-        document: DoclingDocument,
-        chunks: List[DocChunk],
-        document_id: str,
-        index_name: Optional[str] = None,
-    ) -> BulkIndexResponse:
-        """Bulk index a document with its chunks."""
-        operations = []
-        doc_responses = []
-        chunk_responses = []
-        errors = []
-
-        index_name = index_name or self._index_name
-
+    async def index_text(
+        self, 
+        text: DocumentText,
+        index_name: Optional[str] = None
+    ) -> IndexTextResponse:
+        """Index a single text element."""
         try:
-            # Prepare document operation
-            document_data = {"document": document.model_dump()}
+            index_name = index_name or self._index_name
 
-            operations.extend(
-                [{"index": {"_index": index_name, "_id": document_id}}, document_data]
-            )
-
-            # Prepare chunk operations
-            for i, chunk in enumerate(chunks):
-                chunk_id = f"{document_id}_chunk_{i}"
-                chunk_data = {
-                    "chunk": {
-                        "text": chunk.text,
-                        "meta": chunk.meta.model_dump(),
-                        "document_id": document_id,
-                    }
+            # Structure text data under "text" field
+            text_data = {
+                "text": {
+                    "text_id": text.text_id,
+                    "document_id": text.document_id,
+                    "text": text.text,
+                    "label": text.label,
+                    "level": text.level,
+                    "orig": text.orig,
+                    "parent_ref": text.parent_ref,
+                    "children_refs": text.children_refs,
+                    "prov": [prov.model_dump() for prov in text.prov],
                 }
+            }
 
-                if chunk.vector:
-                    chunk_data["chunk"]["vector"] = chunk.vector
-
-                operations.extend(
-                    [{"index": {"_index": index_name, "_id": chunk_id}}, chunk_data]
-                )
-
-            # Execute bulk operation
-            if operations:
-                result = await self._es.bulk(operations=operations)
-
-                # Process results
-                items = result.get("items", [])
-
-                # First item is the document
-                if items:
-                    doc_item = items[0].get("index", {})
-                    doc_success = doc_item.get("status") in [200, 201]
-                    doc_responses.append(
-                        IndexDocumentResponse(
-                            document_id=document_id,
-                            success=doc_success,
-                            message="Indexed successfully"
-                            if doc_success
-                            else str(doc_item.get("error", "")),
-                        )
-                    )
-
-                    if not doc_success:
-                        errors.append(
-                            f"Document {document_id}: {doc_item.get('error', 'Unknown error')}"
-                        )
-
-                # Remaining items are chunks
-                for i, item in enumerate(items[1:], 0):
-                    chunk_item = item.get("index", {})
-                    chunk_success = chunk_item.get("status") in [200, 201]
-                    chunk_id = f"{document_id}_chunk_{i}"
-
-                    chunk_responses.append(
-                        IndexChunkResponse(
-                            chunk_id=chunk_id,
-                            success=chunk_success,
-                            message="Indexed successfully"
-                            if chunk_success
-                            else str(chunk_item.get("error", "")),
-                        )
-                    )
-
-                    if not chunk_success:
-                        errors.append(
-                            f"Chunk {chunk_id}: {chunk_item.get('error', 'Unknown error')}"
-                        )
-
-            total_indexed = len([r for r in doc_responses if r.success]) + len(
-                [r for r in chunk_responses if r.success]
+            result = await self._es.index(
+                index=index_name, id=text.text_id, document=text_data
             )
 
-            return BulkIndexResponse(
-                document_responses=doc_responses,
-                chunk_responses=chunk_responses,
-                total_indexed=total_indexed,
-                errors=errors,
-            )
+            success = result.get("result") in ["created", "updated"]
+            message = f"Text {result.get('result', 'processed')}"
 
+            return IndexTextResponse(
+                text_id=text.text_id, success=success, message=message
+            )
         except Exception as e:
-            logger.error(f"Bulk indexing failed: {e}")
-            return BulkIndexResponse(
-                document_responses=[],
-                chunk_responses=[],
-                total_indexed=0,
-                errors=[str(e)],
+            logger.error(f"Failed to index text {text.text_id}: {e}")
+            return IndexTextResponse(text_id=text.text_id, success=False, message=str(e))
+
+    async def index_picture(
+        self, 
+        picture: DocumentPicture,
+        index_name: Optional[str] = None
+    ) -> IndexPictureResponse:
+        """Index a single picture element."""
+        try:
+            index_name = index_name or self._index_name
+
+            # Structure picture data under "picture" field
+            picture_data = {
+                "picture": {
+                    "picture_id": picture.picture_id,
+                    "document_id": picture.document_id,
+                    "label": picture.label,
+                    "captions": picture.captions,
+                    "references": picture.references,
+                    "footnotes": picture.footnotes,
+                    "parent_ref": picture.parent_ref,
+                    "children_refs": picture.children_refs,
+                    "prov": [prov.model_dump() for prov in picture.prov],
+                    "image": picture.image.model_dump() if picture.image else None,
+                    "annotations": picture.annotations,
+                }
+            }
+
+            result = await self._es.index(
+                index=index_name, id=picture.picture_id, document=picture_data
             )
+
+            success = result.get("result") in ["created", "updated"]
+            message = f"Picture {result.get('result', 'processed')}"
+
+            return IndexPictureResponse(
+                picture_id=picture.picture_id, success=success, message=message
+            )
+        except Exception as e:
+            logger.error(f"Failed to index picture {picture.picture_id}: {e}")
+            return IndexPictureResponse(picture_id=picture.picture_id, success=False, message=str(e))
+
+    async def index_table(
+        self, 
+        table: DocumentTable,
+        index_name: Optional[str] = None
+    ) -> IndexTableResponse:
+        """Index a single table element."""
+        try:
+            index_name = index_name or self._index_name
+
+            # Structure table data under "table" field
+            table_data = {
+                "table": {
+                    "table_id": table.table_id,
+                    "document_id": table.document_id,
+                    "label": table.label,
+                    "captions": table.captions,
+                    "references": table.references,
+                    "footnotes": table.footnotes,
+                    "parent_ref": table.parent_ref,
+                    "children_refs": table.children_refs,
+                    "prov": [prov.model_dump() for prov in table.prov],
+                    "data": table.data.model_dump() if table.data else None,
+                    "annotations": table.annotations,
+                }
+            }
+
+            result = await self._es.index(
+                index=index_name, id=table.table_id, document=table_data
+            )
+
+            success = result.get("result") in ["created", "updated"]
+            message = f"Table {result.get('result', 'processed')}"
+
+            return IndexTableResponse(
+                table_id=table.table_id, success=success, message=message
+            )
+        except Exception as e:
+            logger.error(f"Failed to index table {table.table_id}: {e}")
+            return IndexTableResponse(table_id=table.table_id, success=False, message=str(e))
 
     async def get_document(
         self, document_id: str, index_name: Optional[str] = None
@@ -332,6 +393,90 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             return GetDocumentResponse(
                 document_id=document_id, found=False, source=None
             )
+
+    async def get_picture(
+        self, 
+        document_id: str,
+        picture_id: str,
+        index_name: Optional[str] = None
+    ) -> Optional[DocumentPicture]:
+        """Get a picture by document_id and picture_id."""
+        try:
+            index_name = index_name or self._index_name
+
+            # Search for picture with specific document_id and picture_id
+            query = {
+                "bool": {
+                    "must": [
+                        {"exists": {"field": "picture"}},
+                        {"term": {"picture.document_id": document_id}},
+                        {"term": {"picture.picture_id": picture_id}}
+                    ]
+                }
+            }
+
+            result = await self._es.search(
+                index=index_name,
+                size=1,
+                query=query
+            )
+
+            if result["hits"]["hits"]:
+                hit = result["hits"]["hits"][0]
+                picture_data = hit["_source"].get("picture")
+                
+                if picture_data:
+                    # Convert back to DocumentPicture entity
+                    from ...entities.document import DocumentPicture, ImageData, Provenance, BoundingBox
+                    
+                    # Convert provenance data
+                    prov_list = []
+                    for prov_data in picture_data.get("prov", []):
+                        if "bbox" in prov_data:
+                            bbox = BoundingBox(
+                                left=prov_data["bbox"].get("left", 0),
+                                top=prov_data["bbox"].get("top", 0),
+                                right=prov_data["bbox"].get("right", 0),
+                                bottom=prov_data["bbox"].get("bottom", 0),
+                                coord_origin=prov_data["bbox"].get("coord_origin", "TOPLEFT")
+                            )
+                            prov = Provenance(
+                                page_no=prov_data.get("page_no", 1),
+                                bbox=bbox,
+                                charspan=prov_data.get("charspan", [0, 0])
+                            )
+                            prov_list.append(prov)
+                    
+                    # Convert image data if present
+                    image_data = None
+                    if picture_data.get("image"):
+                        image_info = picture_data["image"]
+                        image_data = ImageData(
+                            mimetype=image_info.get("mimetype", "image/png"),
+                            dpi=image_info.get("dpi", 72),
+                            size=image_info.get("size", {"width": 0, "height": 0}),
+                            uri=image_info.get("uri", "")
+                        )
+                    
+                    return DocumentPicture(
+                        picture_id=picture_data.get("picture_id", picture_id),
+                        document_id=picture_data.get("document_id", document_id),
+                        label=picture_data.get("label", "picture"),
+                        prov=prov_list,
+                        image=image_data,
+                        captions=picture_data.get("captions", []),
+                        references=picture_data.get("references", []),
+                        footnotes=picture_data.get("footnotes", []),
+                        annotations=picture_data.get("annotations", []),
+                        parent_ref=picture_data.get("parent_ref"),
+                        children_refs=picture_data.get("children_refs", [])
+                    )
+            
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to get picture {picture_id} for document {document_id}: {e}")
+            return None
 
     async def search_chunks(self, request: SearchRequest) -> SearchResponse:
         """Search chunks using text or vector similarity."""

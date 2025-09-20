@@ -14,8 +14,106 @@ class DocumentOrigin(BaseModel):
     filename: str
 
 
+class BoundingBox(BaseModel):
+    """Bounding box information for document elements."""
+    
+    left: float
+    top: float
+    right: float
+    bottom: float
+    coord_origin: str
+
+
+class Provenance(BaseModel):
+    """Provenance information for document elements."""
+    
+    page_no: int
+    bbox: BoundingBox
+    charspan: List[int]
+
+
+class DocumentText(BaseModel):
+    """Entity representing a text element from a document."""
+    
+    text_id: str
+    document_id: str
+    text: str
+    label: str
+    level: Optional[int] = None
+    prov: List[Provenance] = Field(default_factory=list)
+    orig: Optional[str] = None
+    parent_ref: Optional[str] = None
+    children_refs: List[str] = Field(default_factory=list)
+
+
+class ImageData(BaseModel):
+    """Image data information."""
+    
+    mimetype: str
+    dpi: int
+    size: Dict[str, int]  # width, height
+    uri: str  # base64 encoded image data
+
+
+class DocumentPicture(BaseModel):
+    """Entity representing a picture element from a document."""
+    
+    picture_id: str
+    document_id: str
+    label: str
+    prov: List[Provenance] = Field(default_factory=list)
+    image: Optional[ImageData] = None
+    captions: List[str] = Field(default_factory=list)
+    references: List[str] = Field(default_factory=list)
+    footnotes: List[str] = Field(default_factory=list)
+    annotations: List[Dict[str, Any]] = Field(default_factory=list)
+    parent_ref: Optional[str] = None
+    children_refs: List[str] = Field(default_factory=list)
+
+
+class TableCell(BaseModel):
+    """Table cell information."""
+    
+    bbox: BoundingBox
+    row_span: int
+    col_span: int
+    start_row_offset_idx: int
+    end_row_offset_idx: int
+    start_col_offset_idx: int
+    end_col_offset_idx: int
+    text: str
+    column_header: bool = False
+    row_header: bool = False
+    row_section: bool = False
+
+
+class TableData(BaseModel):
+    """Table data structure."""
+    
+    table_cells: List[TableCell]
+    num_rows: int
+    num_cols: int
+    grid: List[List[Dict[str, Any]]]
+
+
+class DocumentTable(BaseModel):
+    """Entity representing a table element from a document."""
+    
+    table_id: str
+    document_id: str
+    label: str
+    prov: List[Provenance] = Field(default_factory=list)
+    data: Optional[TableData] = None
+    captions: List[str] = Field(default_factory=list)
+    references: List[str] = Field(default_factory=list)
+    footnotes: List[str] = Field(default_factory=list)
+    annotations: List[Dict[str, Any]] = Field(default_factory=list)
+    parent_ref: Optional[str] = None
+    children_refs: List[str] = Field(default_factory=list)
+
+
 class DoclingDocument(BaseModel):
-    """Entity representing a complete document processed by Docling."""
+    """Entity representing the main document metadata (without content elements)."""
     
     schema_name: str
     version: str
@@ -24,39 +122,9 @@ class DoclingDocument(BaseModel):
     furniture: Dict[str, Any]
     body: Dict[str, Any]
     groups: List[Dict[str, Any]] = Field(default_factory=list)
-    texts: List[Dict[str, Any]] = Field(default_factory=list)
-    pictures: List[Dict[str, Any]] = Field(default_factory=list)
-    tables: List[Dict[str, Any]] = Field(default_factory=list)
     key_value_items: List[Dict[str, Any]] = Field(default_factory=list)
     form_items: List[Dict[str, Any]] = Field(default_factory=list)
     pages: Dict[str, Any] = Field(default_factory=dict)
-    
-    @classmethod
-    def from_docling(cls, dl_doc: DLDocument) -> "DoclingDocument":
-        """Create entity from Docling document."""
-        origin = None
-        if dl_doc.origin:
-            origin = DocumentOrigin(
-                mimetype=dl_doc.origin.mimetype,
-                binary_hash=dl_doc.origin.binary_hash,
-                filename=dl_doc.origin.filename
-            )
-        
-        return cls(
-            schema_name=dl_doc.schema_name,
-            version=dl_doc.version,
-            name=dl_doc.name,
-            origin=origin,
-            furniture=dl_doc.furniture.model_dump() if dl_doc.furniture else {},
-            body=dl_doc.body.model_dump() if dl_doc.body else {},
-            groups=[group.model_dump() for group in dl_doc.groups],
-            texts=[text.model_dump() for text in dl_doc.texts],
-            pictures=[pic.model_dump() for pic in dl_doc.pictures],
-            tables=[table.model_dump() for table in dl_doc.tables],
-            key_value_items=[kv.model_dump() for kv in dl_doc.key_value_items],
-            form_items=[form.model_dump() for form in dl_doc.form_items],
-            pages={str(k): v.model_dump() for k, v in dl_doc.pages.items()}
-        )
 
 
 class DocMeta(BaseModel):

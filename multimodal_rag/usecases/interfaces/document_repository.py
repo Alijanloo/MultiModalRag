@@ -6,12 +6,14 @@ from typing import List, Optional
 from ..dtos import (
     IndexDocumentResponse,
     IndexChunkResponse,
+    IndexTextResponse,
+    IndexPictureResponse,
+    IndexTableResponse,
     SearchRequest,
     SearchResponse,
-    BulkIndexResponse,
     GetDocumentResponse,
 )
-from ...entities.document import DoclingDocument, DocChunk
+from ...entities.document import DoclingDocument, DocChunk, DocumentText, DocumentPicture, DocumentTable
 
 
 class IDocumentIndexRepository(ABC):
@@ -39,14 +41,40 @@ class IDocumentIndexRepository(ABC):
         pass
     
     @abstractmethod
-    async def bulk_index_document_with_chunks(
-        self,
-        document: DoclingDocument,
-        chunks: List[DocChunk],
-        document_id: str,
+    async def index_text(
+        self, 
+        text: DocumentText,
         index_name: Optional[str] = None
-    ) -> BulkIndexResponse:
-        """Bulk index a document with its chunks."""
+    ) -> IndexTextResponse:
+        """Index a single text element."""
+        pass
+    
+    @abstractmethod
+    async def index_picture(
+        self, 
+        picture: DocumentPicture,
+        index_name: Optional[str] = None
+    ) -> IndexPictureResponse:
+        """Index a single picture element."""
+        pass
+    
+    @abstractmethod
+    async def index_table(
+        self, 
+        table: DocumentTable,
+        index_name: Optional[str] = None
+    ) -> IndexTableResponse:
+        """Index a single table element."""
+        pass
+    
+    @abstractmethod
+    async def get_picture(
+        self, 
+        document_id: str,
+        picture_id: str,
+        index_name: Optional[str] = None
+    ) -> Optional[DocumentPicture]:
+        """Get a picture by document_id and picture_id."""
         pass
     
     @abstractmethod
