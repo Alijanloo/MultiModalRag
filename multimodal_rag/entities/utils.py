@@ -3,12 +3,10 @@ from docling_core.types.doc.document import DoclingDocument as DLDocument
 from .document import (
     DocumentOrigin,
     DoclingDocument,
-    BoundingBox,
     Provenance,
     DocumentText,
     ImageData,
     DocumentPicture,
-    TableCell,
     TableData,
     DocumentTable,
 )
@@ -42,7 +40,6 @@ def create_document_entities_from_docling(
         pages={str(k): v.model_dump() for k, v in dl_doc.pages.items()},
     )
 
-    # Extract text elements
     texts = []
     for i, text_data in enumerate(dl_doc.texts):
         text_dict = (
@@ -50,22 +47,8 @@ def create_document_entities_from_docling(
         )
 
         prov_list = []
-        if "prov" in text_dict:
-            for prov_data in text_dict["prov"]:
-                if "bbox" in prov_data:
-                    bbox = BoundingBox(
-                        left=prov_data["bbox"].get("l", 0),
-                        top=prov_data["bbox"].get("t", 0),
-                        right=prov_data["bbox"].get("r", 0),
-                        bottom=prov_data["bbox"].get("b", 0),
-                        coord_origin=prov_data["bbox"].get("coord_origin", "TOPLEFT"),
-                    )
-                    prov = Provenance(
-                        page_no=prov_data.get("page_no", 1),
-                        bbox=bbox,
-                        charspan=prov_data.get("charspan", [0, 0]),
-                    )
-                    prov_list.append(prov)
+        for prov_data in text_dict.get("prov", []):
+            prov_list.append(Provenance.from_elastic_data(prov_data))
 
         text_element = DocumentText(
             text_id=f"{document_id}_text_{i}",
@@ -84,7 +67,6 @@ def create_document_entities_from_docling(
         )
         texts.append(text_element)
 
-    # Extract picture elements
     pictures = []
     for i, pic_data in enumerate(dl_doc.pictures):
         pic_dict = (
@@ -92,32 +74,12 @@ def create_document_entities_from_docling(
         )
 
         prov_list = []
-        if "prov" in pic_dict:
-            for prov_data in pic_dict["prov"]:
-                if "bbox" in prov_data:
-                    bbox = BoundingBox(
-                        left=prov_data["bbox"].get("l", 0),
-                        top=prov_data["bbox"].get("t", 0),
-                        right=prov_data["bbox"].get("r", 0),
-                        bottom=prov_data["bbox"].get("b", 0),
-                        coord_origin=prov_data["bbox"].get("coord_origin", "TOPLEFT"),
-                    )
-                    prov = Provenance(
-                        page_no=prov_data.get("page_no", 1),
-                        bbox=bbox,
-                        charspan=prov_data.get("charspan", [0, 0]),
-                    )
-                    prov_list.append(prov)
+        for prov_data in pic_dict.get("prov", []):
+            prov_list.append(Provenance.from_elastic_data(prov_data))
 
         image_data = None
         if "image" in pic_dict:
-            image_info = pic_dict["image"]
-            image_data = ImageData(
-                mimetype=image_info.get("mimetype", "image/png"),
-                dpi=image_info.get("dpi", 72),
-                size=image_info.get("size", {"width": 0, "height": 0}),
-                uri=image_info.get("uri", ""),
-            )
+            image_data = ImageData.from_elastic_data(pic_dict["image"])
 
         picture_element = DocumentPicture(
             picture_id=f"{document_id}_picture_{i}",
@@ -146,59 +108,12 @@ def create_document_entities_from_docling(
         )
 
         prov_list = []
-        if "prov" in table_dict:
-            for prov_data in table_dict["prov"]:
-                if "bbox" in prov_data:
-                    bbox = BoundingBox(
-                        left=prov_data["bbox"].get("l", 0),
-                        top=prov_data["bbox"].get("t", 0),
-                        right=prov_data["bbox"].get("r", 0),
-                        bottom=prov_data["bbox"].get("b", 0),
-                        coord_origin=prov_data["bbox"].get("coord_origin", "TOPLEFT"),
-                    )
-                    prov = Provenance(
-                        page_no=prov_data.get("page_no", 1),
-                        bbox=bbox,
-                        charspan=prov_data.get("charspan", [0, 0]),
-                    )
-                    prov_list.append(prov)
+        for prov_data in table_dict.get("prov", []):
+            prov_list.append(Provenance.from_elastic_data(prov_data))
 
         table_data_obj = None
         if "data" in table_dict:
-            data_info = table_dict["data"]
-            table_cells = []
-
-            for cell_data in data_info.get("table_cells", []):
-                if "bbox" in cell_data:
-                    cell_bbox = BoundingBox(
-                        left=cell_data["bbox"].get("l", 0),
-                        top=cell_data["bbox"].get("t", 0),
-                        right=cell_data["bbox"].get("r", 0),
-                        bottom=cell_data["bbox"].get("b", 0),
-                        coord_origin=cell_data["bbox"].get("coord_origin", "TOPLEFT"),
-                    )
-
-                    table_cell = TableCell(
-                        bbox=cell_bbox,
-                        row_span=cell_data.get("row_span", 1),
-                        col_span=cell_data.get("col_span", 1),
-                        start_row_offset_idx=cell_data.get("start_row_offset_idx", 0),
-                        end_row_offset_idx=cell_data.get("end_row_offset_idx", 1),
-                        start_col_offset_idx=cell_data.get("start_col_offset_idx", 0),
-                        end_col_offset_idx=cell_data.get("end_col_offset_idx", 1),
-                        text=cell_data.get("text", ""),
-                        column_header=cell_data.get("column_header", False),
-                        row_header=cell_data.get("row_header", False),
-                        row_section=cell_data.get("row_section", False),
-                    )
-                    table_cells.append(table_cell)
-
-            table_data_obj = TableData(
-                table_cells=table_cells,
-                num_rows=data_info.get("num_rows", 0),
-                num_cols=data_info.get("num_cols", 0),
-                grid=data_info.get("grid", []),
-            )
+            table_data_obj = TableData.from_elastic_data(table_dict["data"])
 
         table_element = DocumentTable(
             table_id=f"{document_id}_table_{i}",
