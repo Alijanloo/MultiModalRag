@@ -13,6 +13,7 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
   - `DocChunk`: Document chunk entity with vector embeddings
   - `DocMeta`: Metadata for document chunks
   - `DocumentOrigin`: Document origin information
+  - `DocumentText`, `DocumentPicture`, `DocumentTable`: Specialized document elements
 
 #### Use Cases (`multimodal_rag/usecases/`)
 - `document_indexing.py`: Business logic for document indexing

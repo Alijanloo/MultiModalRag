@@ -315,12 +315,8 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             try:
                 chunk_id = f"{document_id}_chunk_{i}"
                 chunk_data = chunk.to_elastic_data(document_id=document_id)
-                
-                action = {
-                    "_index": index_name,
-                    "_id": chunk_id,
-                    "_source": chunk_data
-                }
+
+                action = {"_index": index_name, "_id": chunk_id, "_source": chunk_data}
                 actions.append(action)
             except Exception as e:
                 failed_count += 1
@@ -335,7 +331,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                 )
                 indexed_count += success_count
                 failed_count += len(failed_items) if failed_items else 0
-                        
+
             except Exception as e:
                 failed_count += len(actions)
                 error_msg = f"Bulk indexing failed: {e}"
@@ -359,11 +355,11 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         for text in texts:
             try:
                 text_data = text.to_elastic_data()
-                
+
                 action = {
                     "_index": index_name,
                     "_id": text.text_id,
-                    "_source": text_data
+                    "_source": text_data,
                 }
                 actions.append(action)
             except Exception as e:
@@ -379,7 +375,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                 )
                 indexed_count += success_count
                 failed_count += len(failed_items) if failed_items else 0
-                        
+
             except Exception as e:
                 failed_count += len(actions)
                 error_msg = f"Bulk indexing failed: {e}"
@@ -403,11 +399,11 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         for picture in pictures:
             try:
                 picture_data = picture.to_elastic_data()
-                
+
                 action = {
                     "_index": index_name,
                     "_id": picture.picture_id,
-                    "_source": picture_data
+                    "_source": picture_data,
                 }
                 actions.append(action)
             except Exception as e:
@@ -423,7 +419,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                 )
                 indexed_count += success_count
                 failed_count += len(failed_items) if failed_items else 0
-                        
+
             except Exception as e:
                 failed_count += len(actions)
                 error_msg = f"Bulk indexing failed: {e}"
@@ -447,11 +443,11 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         for table in tables:
             try:
                 table_data = table.to_elastic_data()
-                
+
                 action = {
                     "_index": index_name,
                     "_id": table.table_id,
-                    "_source": table_data
+                    "_source": table_data,
                 }
                 actions.append(action)
             except Exception as e:
@@ -467,7 +463,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                 )
                 indexed_count += success_count
                 failed_count += len(failed_items) if failed_items else 0
-                        
+
             except Exception as e:
                 failed_count += len(actions)
                 error_msg = f"Bulk indexing failed: {e}"
@@ -534,7 +530,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         filters: Optional[Dict[str, Any]] = None,
         size: int = 10,
         index_name: Optional[str] = None,
-    ) -> Tuple[List[DocChunk], int]:
+    ) -> List[DocChunk]:
         """Search chunks using text or vector similarity."""
         try:
             index_name = index_name or self._index_name
@@ -565,11 +561,11 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                     chunk = DocChunk.from_elastic_hit(hit["_source"])
                     chunks.append(chunk)
 
-            return chunks, result["hits"]["total"]["value"]
+            return chunks
 
         except Exception as e:
             logger.error(f"Search chunks failed: {e}")
-            return [], 0
+            return []
 
     async def search_documents(
         self,
@@ -577,7 +573,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         filters: Optional[Dict[str, Any]] = None,
         size: int = 10,
         index_name: Optional[str] = None,
-    ) -> Tuple[List[DoclingDocument], int]:
+    ) -> List[DoclingDocument]:
         """Search documents using text query."""
         try:
             index_name = index_name or self._index_name
@@ -641,11 +637,11 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                     document = DoclingDocument.from_elastic_hit(hit["_source"])
                     documents.append(document)
 
-            return documents, result["hits"]["total"]["value"]
+            return documents
 
         except Exception as e:
             logger.error(f"Search documents failed: {e}")
-            return [], 0
+            return []
 
     async def delete_document(
         self, document_id: str, index_name: Optional[str] = None

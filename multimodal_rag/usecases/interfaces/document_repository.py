@@ -109,8 +109,8 @@ class IDocumentIndexRepository(ABC):
         filters: Optional[Dict[str, Any]] = None,
         size: int = 10,
         index_name: Optional[str] = None,
-    ) -> Tuple[List[DocChunk], int]:
-        """Search chunks using text or vector similarity. Returns (chunks, total_count)."""
+    ) -> List[DocChunk]:
+        """Search chunks using text or vector similarity."""
         pass
 
     @abstractmethod
@@ -120,8 +120,8 @@ class IDocumentIndexRepository(ABC):
         filters: Optional[Dict[str, Any]] = None,
         size: int = 10,
         index_name: Optional[str] = None,
-    ) -> Tuple[List[DoclingDocument], int]:
-        """Search documents using text query. Returns (documents, total_count)."""
+    ) -> List[DoclingDocument]:
+        """Search documents using text query."""
         pass
 
     @abstractmethod
