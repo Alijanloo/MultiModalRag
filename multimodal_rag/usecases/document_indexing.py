@@ -20,8 +20,8 @@ from ..entities.document import (
     DocumentText,
     DocumentPicture,
     DocumentTable,
-    create_document_entities_from_docling,
 )
+from multimodal_rag.entities.utils import create_document_entities_from_docling
 
 logger = get_logger(__name__)
 
@@ -115,7 +115,6 @@ class DocumentIndexingUseCase:
                     logger.error(error_msg)
                     errors.append(error_msg)
 
-        # Index document
         try:
             if await self._document_repository.index_document(
                 document=document, document_id=document_id, index_name=index_name
@@ -130,13 +129,13 @@ class DocumentIndexingUseCase:
             logger.error(error_msg)
             errors.append(error_msg)
 
-        # Use bulk methods for better performance
-        # Bulk index texts
         if texts:
             try:
-                indexed_count, failed_count, bulk_errors = (
-                    await self._document_repository.bulk_index_texts(texts, index_name)
-                )
+                (
+                    indexed_count,
+                    failed_count,
+                    bulk_errors,
+                ) = await self._document_repository.bulk_index_texts(texts, index_name)
                 total_indexed += indexed_count
                 total_failed += failed_count
                 errors.extend(bulk_errors)
@@ -146,11 +145,14 @@ class DocumentIndexingUseCase:
                 logger.error(error_msg)
                 errors.append(error_msg)
 
-        # Bulk index pictures
         if pictures:
             try:
-                indexed_count, failed_count, bulk_errors = (
-                    await self._document_repository.bulk_index_pictures(pictures, index_name)
+                (
+                    indexed_count,
+                    failed_count,
+                    bulk_errors,
+                ) = await self._document_repository.bulk_index_pictures(
+                    pictures, index_name
                 )
                 total_indexed += indexed_count
                 total_failed += failed_count
@@ -161,11 +163,14 @@ class DocumentIndexingUseCase:
                 logger.error(error_msg)
                 errors.append(error_msg)
 
-        # Bulk index tables
         if tables:
             try:
-                indexed_count, failed_count, bulk_errors = (
-                    await self._document_repository.bulk_index_tables(tables, index_name)
+                (
+                    indexed_count,
+                    failed_count,
+                    bulk_errors,
+                ) = await self._document_repository.bulk_index_tables(
+                    tables, index_name
                 )
                 total_indexed += indexed_count
                 total_failed += failed_count
@@ -176,13 +181,14 @@ class DocumentIndexingUseCase:
                 logger.error(error_msg)
                 errors.append(error_msg)
 
-        # Bulk index chunks
         if chunks:
             try:
-                indexed_count, failed_count, bulk_errors = (
-                    await self._document_repository.bulk_index_chunks(
-                        chunks, document_id, index_name
-                    )
+                (
+                    indexed_count,
+                    failed_count,
+                    bulk_errors,
+                ) = await self._document_repository.bulk_index_chunks(
+                    chunks, document_id, index_name
                 )
                 total_indexed += indexed_count
                 total_failed += failed_count
@@ -247,31 +253,23 @@ class DocumentIndexingUseCase:
                     f"Multiple JSON files found in {result_dir.name}, processing the first one: {json_files[0].name}"
                 )
 
-            json_file = json_files[0]  # Take the first (and typically only) JSON file
+            json_file = json_files[0]
 
             try:
                 logger.info(f"Processing file: {json_file.name}")
 
-                # Load DoclingDocument from JSON
                 with open(json_file, "r", encoding="utf-8") as f:
-                    doc_data = json.load(f)
+                    dl_doc = json.load(f)
 
-                # Convert to Docling document and then to our entity
-                dl_doc = DLDocument.model_validate(doc_data)
+                dl_doc = DLDocument.model_validate(dl_doc)
                 document, texts, pictures, tables = (
                     create_document_entities_from_docling(dl_doc, json_file.stem)
                 )
 
-                await self._document_repository.index_document(
-                    document=document, document_id=json_file.stem, index_name=index_name
-                )
-
-                # Generate chunks using HybridChunker
                 chunk_iter = chunker.chunk(dl_doc=dl_doc)
                 chunks = []
 
                 for dl_chunk in chunk_iter:
-                    # Convert docling chunk to our entity
                     chunk = DocChunk.from_docling_chunk(dl_chunk)
                     chunk.text = chunker.contextualize(chunk=dl_chunk)
                     chunks.append(chunk)
@@ -280,10 +278,8 @@ class DocumentIndexingUseCase:
                     f"Generated {len(chunks)} chunks for document: {json_file.name}"
                 )
 
-                # Create document ID from filename (without extension)
                 document_id = json_file.stem
 
-                # Index document with all elements and chunks
                 response = await self.bulk_index_document_with_elements_and_chunks(
                     document=document,
                     texts=texts,
