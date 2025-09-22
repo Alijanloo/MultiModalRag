@@ -260,10 +260,15 @@ class DocumentIndexingUseCase:
 
                 with open(json_file, "r", encoding="utf-8") as f:
                     dl_doc = json.load(f)
+                document_id = json_file.stem
+
+                if await self._document_repository.get_document(document_id, index_name):
+                    logger.warning(f"Document {document_id} already exists in index {index_name}")
+                    continue
 
                 dl_doc = DLDocument.model_validate(dl_doc)
                 document, texts, pictures, tables = (
-                    create_document_entities_from_docling(dl_doc, json_file.stem)
+                    create_document_entities_from_docling(dl_doc, document_id)
                 )
 
                 chunk_iter = chunker.chunk(dl_doc=dl_doc)
@@ -278,7 +283,6 @@ class DocumentIndexingUseCase:
                     f"Generated {len(chunks)} chunks for document: {json_file.name}"
                 )
 
-                document_id = json_file.stem
 
                 response = await self.bulk_index_document_with_elements_and_chunks(
                     document=document,
