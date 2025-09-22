@@ -330,16 +330,11 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
 
         if actions:
             try:
-                results = await async_bulk(self._es, actions, raise_on_error=False)
-                
-                for success, info in results:
-                    if success:
-                        indexed_count += 1
-                    else:
-                        failed_count += 1
-                        error_msg = f"Bulk index error: {info}"
-                        logger.error(error_msg)
-                        errors.append(error_msg)
+                success_count, failed_items = await async_bulk(
+                    self._es, actions, stats_only=True, raise_on_error=False
+                )
+                indexed_count += success_count
+                failed_count += len(failed_items) if failed_items else 0
                         
             except Exception as e:
                 failed_count += len(actions)
@@ -379,16 +374,11 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
 
         if actions:
             try:
-                results = await async_bulk(self._es, actions, raise_on_error=False)
-                
-                for success, info in results:
-                    if success:
-                        indexed_count += 1
-                    else:
-                        failed_count += 1
-                        error_msg = f"Bulk index error: {info}"
-                        logger.error(error_msg)
-                        errors.append(error_msg)
+                success_count, failed_items = await async_bulk(
+                    self._es, actions, stats_only=True, raise_on_error=False
+                )
+                indexed_count += success_count
+                failed_count += len(failed_items) if failed_items else 0
                         
             except Exception as e:
                 failed_count += len(actions)
@@ -428,16 +418,11 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
 
         if actions:
             try:
-                results = await async_bulk(self._es, actions, raise_on_error=False)
-                
-                for success, info in results:
-                    if success:
-                        indexed_count += 1
-                    else:
-                        failed_count += 1
-                        error_msg = f"Bulk index error: {info}"
-                        logger.error(error_msg)
-                        errors.append(error_msg)
+                success_count, failed_items = await async_bulk(
+                    self._es, actions, stats_only=True, raise_on_error=False
+                )
+                indexed_count += success_count
+                failed_count += len(failed_items) if failed_items else 0
                         
             except Exception as e:
                 failed_count += len(actions)
@@ -477,16 +462,11 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
 
         if actions:
             try:
-                results = await async_bulk(self._es, actions, raise_on_error=False)
-                
-                for success, info in results:
-                    if success:
-                        indexed_count += 1
-                    else:
-                        failed_count += 1
-                        error_msg = f"Bulk index error: {info}"
-                        logger.error(error_msg)
-                        errors.append(error_msg)
+                success_count, failed_items = await async_bulk(
+                    self._es, actions, stats_only=True, raise_on_error=False
+                )
+                indexed_count += success_count
+                failed_count += len(failed_items) if failed_items else 0
                         
             except Exception as e:
                 failed_count += len(actions)
