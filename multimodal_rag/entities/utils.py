@@ -37,7 +37,7 @@ def create_document_entities_from_docling(
         groups=[group.model_dump() for group in dl_doc.groups],
         key_value_items=[kv.model_dump() for kv in dl_doc.key_value_items],
         form_items=[form.model_dump() for form in dl_doc.form_items],
-        pages={str(k): v.model_dump() for k, v in dl_doc.pages.items()},
+        # pages={str(k): v.model_dump() for k, v in dl_doc.pages.items()},
     )
 
     texts = []
