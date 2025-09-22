@@ -77,7 +77,7 @@ class DocumentText(BaseModel):
                 "orig": self.orig,
                 "parent_ref": self.parent_ref,
                 "children_refs": self.children_refs,
-                "prov": [prov.model_dump() for prov in self.prov],
+                "prov": [prov.model_dump(mode="json") for prov in self.prov],
             }
         }
 
@@ -116,11 +116,14 @@ class ImageData(BaseModel):
     @classmethod
     def from_elastic_data(cls, image_data: Dict[str, Any]) -> "ImageData":
         """Create ImageData from Elasticsearch data."""
+        uri_value = image_data.get("uri", "")
+        uri_str = str(uri_value) if uri_value is not None else ""
+
         return cls(
             mimetype=image_data.get("mimetype", "image/png"),
             dpi=image_data.get("dpi", 72),
             size=image_data.get("size", {"width": 0, "height": 0}),
-            uri=image_data.get("uri", ""),
+            uri=uri_str,
         )
 
 
@@ -151,8 +154,8 @@ class DocumentPicture(BaseModel):
                 "footnotes": self.footnotes,
                 "parent_ref": self.parent_ref,
                 "children_refs": self.children_refs,
-                "prov": [prov.model_dump() for prov in self.prov],
-                "image": self.image.model_dump() if self.image else None,
+                "prov": [prov.model_dump(mode="json") for prov in self.prov],
+                "image": self.image.model_dump(mode="json") if self.image else None,
                 "annotations": self.annotations,
             }
         }
@@ -273,8 +276,8 @@ class DocumentTable(BaseModel):
                 "footnotes": self.footnotes,
                 "parent_ref": self.parent_ref,
                 "children_refs": self.children_refs,
-                "prov": [prov.model_dump() for prov in self.prov],
-                "data": self.data.model_dump() if self.data else None,
+                "prov": [prov.model_dump(mode="json") for prov in self.prov],
+                "data": self.data.model_dump(mode="json") if self.data else None,
                 "annotations": self.annotations,
             }
         }
@@ -318,7 +321,7 @@ class DoclingDocument(BaseModel):
     name: str
     origin: Optional[DocumentOrigin] = None
     furniture: Dict[str, Any]
-    body: Dict[str, Any]
+    body: Dict[str, Any] = Field(default_factory=dict)
     groups: List[Dict[str, Any]] = Field(default_factory=list)
     key_value_items: List[Dict[str, Any]] = Field(default_factory=list)
     form_items: List[Dict[str, Any]] = Field(default_factory=list)
@@ -327,6 +330,33 @@ class DoclingDocument(BaseModel):
     def to_elastic_data(self) -> Dict[str, Any]:
         """Convert to Elasticsearch indexing format."""
         return {"document": self.model_dump(mode="json")}
+
+    @classmethod
+    def from_elastic_hit(cls, hit_data: Dict[str, Any]) -> "DoclingDocument":
+        """Create DoclingDocument from Elasticsearch hit data."""
+        document_data = hit_data.get("document", {})
+
+        origin = None
+        if document_data.get("origin"):
+            origin_data = document_data["origin"]
+            origin = DocumentOrigin(
+                mimetype=origin_data.get("mimetype", ""),
+                binary_hash=origin_data.get("binary_hash", 0),
+                filename=origin_data.get("filename", ""),
+            )
+
+        return cls(
+            schema_name=document_data.get("schema_name", ""),
+            version=document_data.get("version", ""),
+            name=document_data.get("name", ""),
+            origin=origin,
+            furniture=document_data.get("furniture", {}),
+            body=document_data.get("body", {}),
+            groups=document_data.get("groups", []),
+            key_value_items=document_data.get("key_value_items", []),
+            form_items=document_data.get("form_items", []),
+            pages=document_data.get("pages", {}),
+        )
 
 
 class DocMeta(BaseModel):
@@ -352,7 +382,7 @@ class DocChunk(BaseModel):
         """Convert to Elasticsearch indexing format."""
         chunk_data = {
             "text": self.text,
-            "meta": self.meta.model_dump(),
+            "meta": self.meta.model_dump(mode="json"),
         }
 
         if document_id:
@@ -379,9 +409,42 @@ class DocChunk(BaseModel):
         meta = DocMeta(
             schema_name=dl_chunk.meta.schema_name,
             version=dl_chunk.meta.version,
-            doc_items=[item.model_dump() for item in dl_chunk.meta.doc_items],
+            doc_items=[
+                item.model_dump(mode="json") for item in dl_chunk.meta.doc_items
+            ],
             headings=dl_chunk.meta.headings,
             origin=origin,
         )
 
         return cls(text=dl_chunk.text, meta=meta, vector=vector)
+
+    @classmethod
+    def from_elastic_hit(cls, hit_data: Dict[str, Any]) -> "DocChunk":
+        """Create DocChunk from Elasticsearch hit data."""
+        chunk_data = hit_data.get("chunk", {})
+
+        # Convert meta data
+        meta_data = chunk_data.get("meta", {})
+
+        origin = None
+        if meta_data.get("origin"):
+            origin_data = meta_data["origin"]
+            origin = DocumentOrigin(
+                mimetype=origin_data.get("mimetype", ""),
+                binary_hash=origin_data.get("binary_hash", 0),
+                filename=origin_data.get("filename", ""),
+            )
+
+        meta = DocMeta(
+            schema_name=meta_data.get("schema_name", ""),
+            version=meta_data.get("version", ""),
+            doc_items=meta_data.get("doc_items", []),
+            headings=meta_data.get("headings"),
+            origin=origin,
+        )
+
+        return cls(
+            text=chunk_data.get("text", ""),
+            meta=meta,
+            vector=chunk_data.get("vector"),
+        )
