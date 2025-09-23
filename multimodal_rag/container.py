@@ -13,6 +13,7 @@ from multimodal_rag.frameworks.google_genai_llm_service import GoogleGenAILLMSer
 from multimodal_rag.adaptors.elasticsearch.elasticsearch_adaptor import ElasticsearchDocumentAdaptor
 from multimodal_rag.usecases.document_indexing import DocumentIndexingUseCase
 from multimodal_rag.usecases.document_search import DocumentSearchUseCase
+from multimodal_rag.usecases.langgraph_agent.agentic_rag import AgenticRAGUseCase
 
 
 @asynccontextmanager
@@ -113,6 +114,15 @@ class ApplicationContainer(containers.DeclarativeContainer):
         DocumentSearchUseCase,
         document_repository=document_repository,
         embedding_service=embedding_service,
+    )
+
+    agentic_rag_use_case = providers.Factory(
+        AgenticRAGUseCase,
+        document_repository=document_repository,
+        embedding_service=embedding_service,
+        llm_service=llm_service,
+        index_name=elasticsearch_config.provided.index_name,
+        retrieval_size=elasticsearch_config.provided.default_search_size,
     )
 
 
