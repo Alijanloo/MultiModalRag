@@ -1,7 +1,7 @@
 """LLM service interface for the multimodal RAG application."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 
 class LLMServiceInterface(ABC):
@@ -9,19 +9,16 @@ class LLMServiceInterface(ABC):
 
     @abstractmethod
     async def generate_content(
-        self, 
-        prompt: str, 
-        model: Optional[str] = None,
-        **kwargs: Any
+        self, prompt: str, model: Optional[str] = None, **kwargs: Any
     ) -> str:
         """
         Generate content using the LLM.
-        
+
         Args:
             prompt: The input prompt for content generation
             model: Optional model name to use for generation
             **kwargs: Additional model-specific parameters
-            
+
         Returns:
             Generated text content
         """
@@ -29,23 +26,45 @@ class LLMServiceInterface(ABC):
 
     @abstractmethod
     async def generate_structured_content(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         response_schema: Optional[Dict[str, Any]] = None,
         model: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Dict[str, Any]:
         """
         Generate structured content using the LLM.
-        
+
         Args:
             prompt: The input prompt for content generation
             response_schema: Optional schema for structured response
             model: Optional model name to use for generation
             **kwargs: Additional model-specific parameters
-            
+
         Returns:
             Structured response as dictionary
+        """
+        pass
+
+    @abstractmethod
+    async def generate_content_with_tools(
+        self,
+        prompt: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        model: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """
+        Generate content using the LLM with tools.
+
+        Args:
+            prompt: The input prompt for content generation
+            tools: Optional list of tools to use for generation
+            model: Optional model name to use for generation
+            **kwargs: Additional model-specific parameters
+
+        Returns:
+            Generated content as dictionary
         """
         pass
 
@@ -53,7 +72,7 @@ class LLMServiceInterface(ABC):
     def get_available_models(self) -> list[str]:
         """
         Get list of available models.
-        
+
         Returns:
             List of available model names
         """

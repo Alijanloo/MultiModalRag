@@ -6,6 +6,7 @@ import time
 from typing import Optional, Dict, Any, Union, List
 from google import genai
 from google.genai.types import HttpOptions
+from google.genai import types
 
 from multimodal_rag.usecases.interfaces.llm_service import LLMServiceInterface
 from multimodal_rag.frameworks.logging_config import get_logger
@@ -70,20 +71,20 @@ class GoogleGenAILLMService(LLMServiceInterface):
     def _switch_to_next_api_key(self) -> bool:
         """
         Switch to the next available API key.
-        
+
         Returns:
             True if switched to a new key, False if no more keys available
         """
         if len(self._api_keys) <= 1:
             return False
-            
+
         self._token_index = (self._token_index + 1) % len(self._api_keys)
         new_api_key = self._api_keys[self._token_index]
-        
+
         self._client = genai.Client(
             api_key=new_api_key, http_options=HttpOptions(timeout=5000)
         )
-        
+
         logger.info(f"Switched to API key index {self._token_index}")
         return True
 
@@ -102,15 +103,15 @@ class GoogleGenAILLMService(LLMServiceInterface):
             Generated text content
         """
         model_name = model or self._default_model
-        
+
         tried_keys = set()
-        
+
         while len(tried_keys) < len(self._api_keys):
             current_key_index = self._token_index
             tried_keys.add(current_key_index)
-            
+
             logger.info(f"Trying with API key index {current_key_index}")
-            
+
             for attempt in range(self._max_retries + 1):
                 try:
                     logger.debug(
@@ -122,22 +123,35 @@ class GoogleGenAILLMService(LLMServiceInterface):
                     )
 
                     generated_text = response.text
-                    logger.info(f"Generated content of length {len(generated_text)} with API key index {current_key_index}")
+                    logger.info(
+                        f"Generated content of length {len(generated_text)} with API key index {current_key_index}"
+                    )
 
                     return generated_text
 
                 except Exception as e:
                     error_str = str(e).lower()
-                    is_rate_limit_error = any(term in error_str for term in ['rate limit', 'quota', '429', 'too many requests'])
-                    
+                    is_rate_limit_error = any(
+                        term in error_str
+                        for term in ["rate limit", "quota", "429", "too many requests"]
+                    )
+
                     if attempt == self._max_retries:
-                        if is_rate_limit_error and len(tried_keys) < len(self._api_keys):
-                            logger.warning(f"Exhausted retries with API key index {current_key_index} due to rate limiting, switching to next key")
+                        if is_rate_limit_error and len(tried_keys) < len(
+                            self._api_keys
+                        ):
+                            logger.warning(
+                                f"Exhausted retries with API key index {current_key_index} due to rate limiting, switching to next key"
+                            )
                             break
                         else:
-                            logger.error(f"Error generating content after {self._max_retries + 1} attempts with API key index {current_key_index}: {str(e)}")
+                            logger.error(
+                                f"Error generating content after {self._max_retries + 1} attempts with API key index {current_key_index}: {str(e)}"
+                            )
                             if len(tried_keys) >= len(self._api_keys):
-                                raise RuntimeError(f"Failed to generate content after trying all {len(self._api_keys)} available API keys")
+                                raise RuntimeError(
+                                    f"Failed to generate content after trying all {len(self._api_keys)} available API keys"
+                                )
                             break
                     else:
                         retry_delay = parse_retry_delay_from_error(e)
@@ -146,12 +160,14 @@ class GoogleGenAILLMService(LLMServiceInterface):
                             f"Error generating content (attempt {attempt + 1}/{self._max_retries + 1}), retrying in {retry_delay}s: {str(e)}"
                         )
                         time.sleep(retry_delay)
-            
+
             if not self._switch_to_next_api_key():
                 break
-        
+
         # If we've tried all API keys and none worked
-        raise RuntimeError(f"Failed to generate content after trying all {len(self._api_keys)} available API keys")
+        raise RuntimeError(
+            f"Failed to generate content after trying all {len(self._api_keys)} available API keys"
+        )
 
     async def generate_structured_content(
         self,
@@ -185,13 +201,15 @@ Ensure to respond with a JSON object that follows this schema:
 Ensure your response is valid JSON and follows the schema exactly."""
 
         tried_keys = set()
-        
+
         while len(tried_keys) < len(self._api_keys):
             current_key_index = self._token_index
             tried_keys.add(current_key_index)
-            
-            logger.info(f"Trying structured content with API key index {current_key_index}")
-            
+
+            logger.info(
+                f"Trying structured content with API key index {current_key_index}"
+            )
+
             for attempt in range(self._max_retries + 1):
                 try:
                     logger.debug(
@@ -215,7 +233,9 @@ Ensure your response is valid JSON and follows the schema exactly."""
                             generated_text = generated_text[json_start:json_end].strip()
 
                         structured_response = json.loads(generated_text)
-                        logger.info(f"Successfully generated structured content with API key index {current_key_index}")
+                        logger.info(
+                            f"Successfully generated structured content with API key index {current_key_index}"
+                        )
                         return structured_response
                     except json.JSONDecodeError:
                         logger.warning(
@@ -225,16 +245,27 @@ Ensure your response is valid JSON and follows the schema exactly."""
 
                 except Exception as e:
                     error_str = str(e).lower()
-                    is_rate_limit_error = any(term in error_str for term in ['rate limit', 'quota', '429', 'too many requests'])
-                    
+                    is_rate_limit_error = any(
+                        term in error_str
+                        for term in ["rate limit", "quota", "429", "too many requests"]
+                    )
+
                     if attempt == self._max_retries:
-                        if is_rate_limit_error and len(tried_keys) < len(self._api_keys):
-                            logger.warning(f"Exhausted retries with API key index {current_key_index} due to rate limiting, switching to next key")
+                        if is_rate_limit_error and len(tried_keys) < len(
+                            self._api_keys
+                        ):
+                            logger.warning(
+                                f"Exhausted retries with API key index {current_key_index} due to rate limiting, switching to next key"
+                            )
                             break
                         else:
-                            logger.error(f"Error generating structured content after {self._max_retries + 1} attempts with API key index {current_key_index}: {str(e)}")
+                            logger.error(
+                                f"Error generating structured content after {self._max_retries + 1} attempts with API key index {current_key_index}: {str(e)}"
+                            )
                             if len(tried_keys) >= len(self._api_keys):
-                                raise RuntimeError(f"Failed to generate structured content after trying all {len(self._api_keys)} available API keys")
+                                raise RuntimeError(
+                                    f"Failed to generate structured content after trying all {len(self._api_keys)} available API keys"
+                                )
                             break
                     else:
                         retry_delay = parse_retry_delay_from_error(e)
@@ -243,12 +274,142 @@ Ensure your response is valid JSON and follows the schema exactly."""
                             f"Error generating structured content (attempt {attempt + 1}/{self._max_retries + 1}), retrying in {retry_delay}s: {str(e)}"
                         )
                         time.sleep(retry_delay)
-            
+
             if not self._switch_to_next_api_key():
                 break
-        
+
         # If we've tried all API keys and none worked
-        raise RuntimeError(f"Failed to generate structured content after trying all {len(self._api_keys)} available API keys")
+        raise RuntimeError(
+            f"Failed to generate structured content after trying all {len(self._api_keys)} available API keys"
+        )
+
+    async def generate_content_with_tools(
+        self,
+        prompt: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        model: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """
+        Generate content with tool calling support.
+
+        Args:
+            prompt: The input prompt for content generation
+            tools: List of tool declarations for function calling
+            model: Optional model name to use for generation
+            **kwargs: Additional model-specific parameters
+
+        Returns:
+            Dictionary containing response and potential function calls
+        """
+        model_name = model or self._default_model
+
+        tried_keys = set()
+
+        while len(tried_keys) < len(self._api_keys):
+            current_key_index = self._token_index
+            tried_keys.add(current_key_index)
+
+            logger.info(
+                f"Trying content generation with tools using API key index {current_key_index}"
+            )
+
+            for attempt in range(self._max_retries + 1):
+                try:
+                    logger.debug(
+                        f"Generating content with tools using model: {model_name} (attempt {attempt + 1})"
+                    )
+
+                    config = None
+                    if tools:
+                        # Convert tools to Google GenAI format
+                        function_declarations = []
+                        for tool in tools:
+                            if "function" in tool:
+                                function_declarations.append(tool["function"])
+                            else:
+                                function_declarations.append(tool)
+
+                        tools_config = types.Tool(
+                            function_declarations=function_declarations
+                        )
+                        config = types.GenerateContentConfig(tools=[tools_config])
+
+                    response = self._client.models.generate_content(
+                        model=model_name, contents=prompt, config=config, **kwargs
+                    )
+
+                    # Parse the response
+                    result = {
+                        "text": response.text if response.text else "",
+                        "function_calls": [],
+                        "has_function_call": False,
+                    }
+
+                    # Check for function calls
+                    if response.candidates and len(response.candidates) > 0:
+                        candidate = response.candidates[0]
+                        if candidate.content and candidate.content.parts:
+                            for part in candidate.content.parts:
+                                if (
+                                    hasattr(part, "function_call")
+                                    and part.function_call
+                                ):
+                                    function_call = part.function_call
+                                    result["function_calls"].append(
+                                        {
+                                            "name": function_call.name,
+                                            "args": dict(function_call.args)
+                                            if function_call.args
+                                            else {},
+                                        }
+                                    )
+                                    result["has_function_call"] = True
+
+                    logger.info(
+                        f"Successfully generated content with tools using API key index {current_key_index}"
+                    )
+                    return result
+
+                except Exception as e:
+                    error_str = str(e).lower()
+                    is_rate_limit_error = any(
+                        term in error_str
+                        for term in ["rate limit", "quota", "429", "too many requests"]
+                    )
+
+                    if attempt == self._max_retries:
+                        if is_rate_limit_error and len(tried_keys) < len(
+                            self._api_keys
+                        ):
+                            logger.warning(
+                                f"Exhausted retries with API key index {current_key_index} due to rate limiting, switching to next key"
+                            )
+                            break
+                        else:
+                            logger.error(
+                                f"Error generating content with tools after {self._max_retries + 1} attempts with API key index {current_key_index}: {str(e)}"
+                            )
+                            if len(tried_keys) >= len(self._api_keys):
+                                raise RuntimeError(
+                                    f"Failed to generate content with tools after trying all {len(self._api_keys)} available API keys"
+                                )
+                            break
+                    else:
+                        retry_delay = parse_retry_delay_from_error(e)
+
+                        logger.warning(
+                            f"Error generating content with tools (attempt {attempt + 1}/{self._max_retries + 1}), retrying in {retry_delay}s: {str(e)}"
+                        )
+                        time.sleep(retry_delay)
+
+            if not self._switch_to_next_api_key():
+                break
+
+        # If we've tried all API keys and none worked
+        raise RuntimeError(
+            f"Failed to generate content with tools after trying all {len(self._api_keys)} available API keys"
+        )
 
     def get_available_models(self) -> list[str]:
         """
