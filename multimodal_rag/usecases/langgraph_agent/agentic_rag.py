@@ -128,23 +128,22 @@ class AgenticRAGUseCase:
 
             if response_data.get("has_function_call", False):
                 function_calls = response_data.get("function_calls", [])
-                if function_calls:
-                    tool_call = function_calls[0]
-                    tool_call_id = f"call_{hash(str(tool_call)) % 10000}"
-                    response = AIMessage(
-                        content="",
-                        tool_calls=[
-                            {
-                                "id": tool_call_id,
-                                "name": tool_call["name"],
-                                "args": tool_call["args"],
-                            }
-                        ],
-                    )
-                else:
-                    response = AIMessage(
-                        content=response_data.get("text", "I'll help you with that.")
-                    )
+                tool_call = function_calls[0]
+                tool_call_id = f"call_{hash(str(tool_call)) % 10000}"
+                response = AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "id": tool_call_id,
+                            "name": tool_call["name"],
+                            "args": tool_call["args"],
+                        }
+                    ],
+                )
+            else:
+                response = AIMessage(
+                    content=response_data.get("text", "I'll help you with that.")
+                )
 
             return {"messages": [response]}
 

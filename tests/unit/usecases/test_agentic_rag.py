@@ -40,7 +40,7 @@ class TestAgenticRAGUseCase:
     def mock_embedding_service(self):
         """Mock embedding service."""
         service = AsyncMock()
-        service.generate_embedding.return_value = [0.1] * 1536
+        service.embed_single.return_value = [0.1] * 1536
         return service
 
     @pytest.fixture
@@ -48,7 +48,6 @@ class TestAgenticRAGUseCase:
         """Mock LLM service."""
         service = AsyncMock()
         service.generate_content.return_value = "This is a generated response about machine learning."
-        # Mock the tool calling method to return proper structure
         service.generate_content_with_tools.return_value = {
             "text": "Hello! How can I help you today?",
             "function_calls": [],
@@ -86,9 +85,25 @@ class TestAgenticRAGUseCase:
 
     @pytest.mark.asyncio
     async def test_process_question_requiring_retrieval(
-        self, agentic_rag_use_case, mock_document_repository
+        self, agentic_rag_use_case, mock_document_repository, mock_llm_service
     ):
         """Test processing a question that requires document retrieval."""
+        mock_llm_service.generate_content_with_tools.return_value = {
+            "text": "",
+            "function_calls": [
+                {
+                    "name": "retrieve_documents",
+                    "args": {"query": "What is machine learning?"}
+                }
+            ],
+            "has_function_call": True
+        }
+        
+        mock_llm_service.generate_content.side_effect = [
+            "yes",  # Document grading response
+            "Machine learning is a subset of artificial intelligence."
+        ]
+        
         response = await agentic_rag_use_case.process_message(
             "What is machine learning?"
         )
@@ -127,8 +142,19 @@ class TestAgenticRAGUseCase:
         self, mock_document_repository, mock_embedding_service, mock_llm_service
     ):
         """Test error handling in the agentic RAG system."""
-        # Mock an error in the embedding service
-        mock_embedding_service.generate_embedding.side_effect = Exception(
+        # Configure LLM service to trigger retrieval
+        mock_llm_service.generate_content_with_tools.return_value = {
+            "text": "",
+            "function_calls": [
+                {
+                    "name": "retrieve_documents",
+                    "args": {"query": "What is AI?"}
+                }
+            ],
+            "has_function_call": True
+        }
+        
+        mock_embedding_service.embed_single.side_effect = Exception(
             "Embedding service error"
         )
 
@@ -149,7 +175,6 @@ class TestAgenticRAGUseCase:
     @pytest.mark.asyncio
     async def test_conversation_state_methods(self, agentic_rag_use_case):
         """Test conversation state management methods."""
-        # These are placeholder implementations, so they should return expected defaults
         state = await agentic_rag_use_case.get_conversation_state("test_chat")
         assert state is None  # Default implementation returns None
 
