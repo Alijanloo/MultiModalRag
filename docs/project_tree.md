@@ -20,6 +20,9 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
   - `DocumentIndexingUseCase`: Handles document and chunk indexing
 - `document_search.py`: Business logic for document search operations
   - `DocumentSearchUseCase`: Handles search and retrieval operations
+- `langgraph_agent/`: Agentic RAG implementation using LangGraph
+  - `agentic_rag.py`: Main agentic RAG use case with intelligent retrieval
+  - `dtos.py`: Data Transfer Objects for agentic RAG operations
 - `dtos.py`: Data Transfer Objects for external API boundaries
   - `SearchRequest`: External search API request
   - Response DTOs: `SearchResponse`, `IndexDocumentResponse`, etc.
@@ -57,11 +60,15 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
 4. **Hybrid Search**: Combined text and vector search capabilities
 5. **Document References**: Chunks maintain references to parent documents
 6. **LLM Integration**: Google GenAI for content generation and Q&A
-7. **Dependency Injection**: Proper DI container setup for all services
+7. **Agentic RAG**: Intelligent document retrieval with LangGraph workflow
+8. **Picture Retrieval**: Automatic retrieval of associated pictures from document chunks
+9. **Dependency Injection**: Proper DI container setup for all services
+10. **Conversation Management**: Chat session handling with context preservation
 
 ### Usage Examples
 
 - `examples/elasticsearch_example.py`: Usage demonstration with simplified internal operations
+- `examples/agentic_rag_example.py`: Complete agentic RAG workflow demonstration
 - `tests/integration/test_elasticsearch_adaptor.py`: Test cases
 
 ### Dependencies
@@ -72,13 +79,16 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
 - **AsyncIO**: Asynchronous operations
 - **Google GenAI**: Embedding generation and LLM services
 - **Dependency Injector**: Dependency injection framework
+- **LangGraph**: Workflow orchestration for agentic RAG
+- **LangChain**: Tool creation and message handling
 
 ## Next Steps
 
 1. ✅ Implement embedding service integration (Google GenAI)
 2. ✅ Add LLM service for content generation  
-3. Add more sophisticated search ranking
-4. Implement document relationship mapping
-5. Add monitoring and metrics
-6. Optimize index performance for large datasets
-7. Add RAG pipeline with context retrieval and generation
+3. ✅ Add agentic RAG pipeline with intelligent retrieval and picture support
+4. Add more sophisticated search ranking
+5. Implement document relationship mapping
+6. Add monitoring and metrics
+7. Optimize index performance for large datasets
+8. Add conversation persistence and session management
