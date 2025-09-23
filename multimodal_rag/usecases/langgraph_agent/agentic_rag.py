@@ -16,6 +16,7 @@ from multimodal_rag.usecases.interfaces.embedding_service import (
 from multimodal_rag.usecases.interfaces.llm_service import LLMServiceInterface
 from multimodal_rag.entities.document import DocChunk, DocumentPicture
 from .dtos import AgentResponse, ConversationState, ChatMessage
+from .prompts import AgenticRAGPrompts
 
 logger = get_logger(__name__)
 
@@ -24,7 +25,7 @@ class AgentState(TypedDict):
     """Extended state for the agentic RAG workflow."""
 
     messages: List[BaseMessage]
-    current_chunks: Dict[str, DocChunk]  # Store chunks by ID
+    current_chunks: Dict[str, DocChunk]
 
 
 class AgenticRAGUseCase:
@@ -72,10 +73,8 @@ class AgenticRAGUseCase:
                 Retrieved document content as formatted string with chunk IDs
             """
             try:
-                # Generate embedding for the query
                 vector = await self._embedding_service.embed_single(query)
 
-                # Search chunks using hybrid search
                 chunks = await self._document_repository.search_chunks(
                     query=query,
                     vector=vector,
@@ -86,12 +85,9 @@ class AgenticRAGUseCase:
                 if not chunks:
                     return "No relevant documents found for the query."
 
-                # Format chunks for the LLM with chunk IDs
                 formatted_content = []
                 for i, chunk in enumerate(chunks, 1):
                     chunk_id = f"chunk_{i}_{hash(chunk.text) % 10000}"
-                    # Store chunk in a way that can be accessed later
-                    # This is a limitation - we need to store chunks in the workflow state
                     content = f"[CHUNK_ID: {chunk_id}]\nDocument {i}:\n{chunk.text}"
                     if chunk.meta and chunk.meta.headings:
                         content = f"[CHUNK_ID: {chunk_id}]\nDocument {i} (Headings: {chunk.meta.headings}):\n{chunk.text}"
@@ -110,7 +106,6 @@ class AgenticRAGUseCase:
     ) -> Dict[str, List[BaseMessage]]:
         """Generate a response or decide to retrieve documents based on the current state."""
         try:
-            # Convert state messages to a format the LLM service can understand
             conversation_history = []
             for msg in state["messages"]:
                 if isinstance(msg, HumanMessage):
@@ -118,48 +113,23 @@ class AgenticRAGUseCase:
                 elif isinstance(msg, AIMessage):
                     conversation_history.append(f"Assistant: {msg.content}")
 
-            # Create prompt for the LLM to decide action
-            prompt = f"""You are an intelligent assistant that can either respond directly to users or search for information when needed.
+            current_message = state["messages"][-1].content if state["messages"] else ""
+            conversation_context = chr(10).join(conversation_history[-3:])
 
-Conversation history:
-{chr(10).join(conversation_history[-3:])}  # Last 3 messages for context
+            prompt = AgenticRAGPrompts.get_query_or_respond_prompt(
+                conversation_context, current_message
+            )
 
-Current user message: {state["messages"][-1].content if state["messages"] else ""}
+            tools = [AgenticRAGPrompts.get_retriever_tool_definition()]
 
-If the user's question requires specific information that you don't have or is about document content, use the retrieve_documents tool to search for relevant information.
-If the user's question is a general greeting, conversation, or something you can answer without additional context, respond directly.
-
-Available tools:
-- retrieve_documents: Search for relevant documents and information"""
-
-            # Define tools for the LLM
-            tools = [
-                {
-                    "name": "retrieve_documents",
-                    "description": "Search and return information from the document repository.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "query": {
-                                "type": "string",
-                                "description": "Search query for retrieving relevant documents",
-                            }
-                        },
-                        "required": ["query"],
-                    },
-                }
-            ]
-
-            # Use LLM service to generate response with tool calling support
             response_data = await self._llm_service.generate_content_with_tools(
                 prompt, tools=tools
             )
 
             if response_data.get("has_function_call", False):
-                # Create a tool call message
                 function_calls = response_data.get("function_calls", [])
                 if function_calls:
-                    tool_call = function_calls[0]  # Take the first function call
+                    tool_call = function_calls[0]
                     tool_call_id = f"call_{hash(str(tool_call)) % 10000}"
                     response = AIMessage(
                         content="",
@@ -196,16 +166,9 @@ Available tools:
             question = state["messages"][0].content
             context = state["messages"][-1].content
 
-            grade_prompt = f"""You are a grader assessing relevance of retrieved document content to a user question.
-
-Retrieved content: {context}
-
-User question: {question}
-
-If the content contains information related to the user question, respond with 'yes'.
-If the content is not relevant or doesn't contain useful information, respond with 'no'.
-
-Respond with only 'yes' or 'no'."""
+            grade_prompt = AgenticRAGPrompts.get_document_grading_prompt(
+                context, question
+            )
 
             response = await self._llm_service.generate_content(grade_prompt)
 
@@ -225,11 +188,9 @@ Respond with only 'yes' or 'no'."""
         try:
             original_question = state["messages"][0].content
 
-            rewrite_prompt = f"""Look at the input and try to reason about the underlying semantic intent and meaning.
-
-Original question: {original_question}
-
-Formulate an improved question that would be better for searching and finding relevant information:"""
+            rewrite_prompt = AgenticRAGPrompts.get_question_rewrite_prompt(
+                original_question
+            )
 
             rewritten_content = await self._llm_service.generate_content(rewrite_prompt)
 
@@ -238,7 +199,7 @@ Formulate an improved question that would be better for searching and finding re
 
         except Exception as e:
             logger.error(f"Error in _rewrite_question: {e}")
-            return {"messages": [state["messages"][0]]}  # Return original question
+            return {"messages": [state["messages"][0]]}
 
     async def _generate_answer(self, state: AgentState) -> Dict[str, List[BaseMessage]]:
         """Generate final answer based on retrieved context."""
@@ -246,37 +207,11 @@ Formulate an improved question that would be better for searching and finding re
             question = state["messages"][0].content
             context = state["messages"][-1].content
 
-            generate_prompt = f"""You are an assistant for question-answering tasks. Use the following retrieved context to answer the question.
+            generate_prompt = AgenticRAGPrompts.get_answer_generation_prompt(
+                question, context
+            )
 
-If you don't know the answer based on the context, just say that you don't know.
-Keep the answer concise and informative.
-
-When you use information from specific chunks, note the chunk IDs (marked as [CHUNK_ID: ...]) that you referenced.
-
-Question: {question}
-
-Context: {context}
-
-Provide a structured response with:
-1. Your answer
-2. The chunk IDs you used (if any)"""
-
-            # Use structured content generation if available
-            response_schema = {
-                "type": "object",
-                "properties": {
-                    "answer": {
-                        "type": "string",
-                        "description": "The main answer content",
-                    },
-                    "chunk_ids_used": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of chunk IDs used to generate this answer",
-                    },
-                },
-                "required": ["answer", "chunk_ids_used"],
-            }
+            response_schema = AgenticRAGPrompts.get_answer_response_schema()
 
             if hasattr(self._llm_service, "generate_structured_content"):
                 structured_response = (
@@ -285,13 +220,11 @@ Provide a structured response with:
                     )
                 )
 
-                # Create response with embedded chunk information
                 answer_content = structured_response.get(
                     "answer", "I couldn't generate an answer."
                 )
                 chunk_ids_used = structured_response.get("chunk_ids_used", [])
 
-                # Add metadata to the response
                 metadata_info = []
                 if chunk_ids_used:
                     metadata_info.append(f"Used chunks: {', '.join(chunk_ids_used)}")
@@ -301,7 +234,6 @@ Provide a structured response with:
 
                 response = AIMessage(content=answer_content)
             else:
-                # Fallback to regular content generation
                 answer = await self._llm_service.generate_content(generate_prompt)
                 response = AIMessage(content=answer)
 
@@ -319,7 +251,6 @@ Provide a structured response with:
         try:
             workflow = StateGraph(AgentState)
 
-            # Add nodes
             workflow.add_node(
                 "generate_query_or_respond", self._generate_query_or_respond
             )
@@ -327,10 +258,8 @@ Provide a structured response with:
             workflow.add_node("rewrite_question", self._rewrite_question)
             workflow.add_node("generate_answer", self._generate_answer)
 
-            # Add edges
             workflow.add_edge(START, "generate_query_or_respond")
 
-            # Conditional edge after generate_query_or_respond
             workflow.add_conditional_edges(
                 "generate_query_or_respond",
                 tools_condition,
@@ -340,7 +269,6 @@ Provide a structured response with:
                 },
             )
 
-            # Conditional edge after retrieve
             workflow.add_conditional_edges(
                 "retrieve",
                 self._grade_documents,
@@ -349,7 +277,6 @@ Provide a structured response with:
             workflow.add_edge("generate_answer", END)
             workflow.add_edge("rewrite_question", "generate_query_or_respond")
 
-            # Compile the graph
             self._graph = workflow.compile()
 
         except Exception as e:
@@ -376,7 +303,7 @@ Provide a structured response with:
             messages = []
 
             if conversation_history:
-                for hist_msg in conversation_history[-5:]:  # Keep last 5 messages
+                for hist_msg in conversation_history[-5:]:
                     if hist_msg.role == "user":
                         messages.append(HumanMessage(content=hist_msg.content))
                     elif hist_msg.role == "assistant":
@@ -403,12 +330,10 @@ Provide a structured response with:
 
             response_content = final_messages[-1].content
 
-            # Extract chunk IDs used and pictures
             chunks_used = []
             chunk_ids_used = []
             pictures = []
 
-            # Extract chunk IDs from the response content
             if "[Metadata:" in response_content:
                 import re
 
@@ -418,7 +343,6 @@ Provide a structured response with:
                     chunk_ids_text = match.group(1)
                     chunk_ids_used = [cid.strip() for cid in chunk_ids_text.split(",")]
 
-            # If retrieval was performed, get the chunks and associated pictures
             await self._extract_chunks_and_pictures_from_response(
                 final_messages, chunks_used, pictures, chunk_ids_used, chat_id
             )
@@ -450,13 +374,11 @@ Provide a structured response with:
     ) -> None:
         """Extract chunks and pictures from the response based on chunk IDs used."""
         try:
-            # Look for tool messages that contain retrieval results
             for message in messages:
                 if (
                     isinstance(message, ToolMessage)
                     and message.name == "retrieve_documents"
                 ):
-                    # Extract query from the tool call
                     query = None
                     for msg in messages:
                         if isinstance(msg, AIMessage) and msg.tool_calls:
@@ -466,7 +388,6 @@ Provide a structured response with:
                                     break
 
                     if query:
-                        # Re-retrieve chunks to get actual objects
                         vector = await self._embedding_service.embed_single(query)
                         retrieved_chunks = (
                             await self._document_repository.search_chunks(
@@ -477,22 +398,18 @@ Provide a structured response with:
                             )
                         )
 
-                        # Create a mapping from chunk IDs to chunks
                         chunk_id_to_chunk = {}
                         for i, chunk in enumerate(retrieved_chunks, 1):
                             chunk_id = f"chunk_{i}_{hash(chunk.text) % 10000}"
                             chunk_id_to_chunk[chunk_id] = chunk
 
-                        # Add chunks that were actually used
                         for chunk_id in chunk_ids_used:
                             if chunk_id in chunk_id_to_chunk:
                                 chunks_used.append(chunk_id_to_chunk[chunk_id])
 
-                        # If no specific chunk IDs were provided, use all retrieved chunks
                         if not chunk_ids_used:
                             chunks_used.extend(retrieved_chunks)
 
-                        # Extract pictures from used chunks
                         for chunk in chunks_used:
                             if chunk.meta and hasattr(chunk.meta, "doc_items"):
                                 doc_items = chunk.meta.doc_items
@@ -502,7 +419,6 @@ Provide a structured response with:
                                             hasattr(item, "label")
                                             and "picture" in item.label.lower()
                                         ):
-                                            # Extract picture ID and document ID
                                             picture_id = getattr(
                                                 item, "picture_id", None
                                             )
@@ -523,12 +439,8 @@ Provide a structured response with:
 
     async def get_conversation_state(self, chat_id: str) -> Optional[ConversationState]:
         """Get the current state of a conversation."""
-        # This would typically be stored in a database or cache
-        # For now, return None as we don't have conversation persistence
         return None
 
     async def save_conversation_state(self, state: ConversationState) -> bool:
         """Save the current state of a conversation."""
-        # This would typically save to a database or cache
-        # For now, return True as a placeholder
         return True
