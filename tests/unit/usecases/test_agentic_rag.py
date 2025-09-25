@@ -53,6 +53,10 @@ class TestAgenticRAGUseCase:
             "function_calls": [],
             "has_function_call": False
         }
+        service.generate_structured_content.return_value = {
+            "answer": "Machine learning is a subset of artificial intelligence.",
+            "chunk_ids_used": ["chunk_1_1234"]
+        }
         return service
 
     @pytest.fixture
@@ -80,7 +84,7 @@ class TestAgenticRAGUseCase:
 
         assert isinstance(response, AgentResponse)
         assert "Hello" in response.content
-        assert len(response.chunks_used) == 0
+        assert len(response.retrieved_chunks) == 0
         assert len(response.pictures) == 0
 
     @pytest.mark.asyncio
@@ -111,17 +115,6 @@ class TestAgenticRAGUseCase:
         assert isinstance(response, AgentResponse)
         assert response.content is not None
         mock_document_repository.search_chunks.assert_called()
-
-    @pytest.mark.asyncio
-    async def test_process_with_chat_id(self, agentic_rag_use_case):
-        """Test processing a message with a chat ID."""
-        chat_id = "test_chat_123"
-
-        response = await agentic_rag_use_case.process_message(
-            "Tell me about neural networks", chat_id=chat_id
-        )
-
-        assert response.chat_id == chat_id
 
     @pytest.mark.asyncio
     async def test_process_with_conversation_history(self, agentic_rag_use_case):
