@@ -42,10 +42,9 @@ class AgentResponse(BaseModel):
     """Response from the agentic RAG system."""
     
     content: str = Field(description="Generated response content")
-    chunks_used: List[DocChunk] = Field(default_factory=list, description="Document chunks used in response")
+    retrieved_chunks: List[DocChunk] = Field(default_factory=list, description="Document chunks passed to generator.")
     chunk_ids_used: List[str] = Field(default_factory=list, description="IDs of chunks referenced in the response")
     pictures: List[DocumentPicture] = Field(default_factory=list, description="Pictures associated with the response")
-    chat_id: Optional[str] = Field(default=None, description="Chat session identifier")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 

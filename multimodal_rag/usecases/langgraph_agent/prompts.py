@@ -5,7 +5,9 @@ class AgenticRAGPrompts:
     """Collection of prompts used in the agentic RAG workflow."""
 
     @staticmethod
-    def get_query_or_respond_prompt(conversation_history: str, current_message: str) -> str:
+    def get_query_or_respond_prompt(
+        conversation_history: str, current_message: str
+    ) -> str:
         """Prompt for deciding whether to query documents or respond directly."""
         return f"""You are an intelligent assistant that can either respond directly to users or search for information when needed.
 
@@ -35,27 +37,27 @@ If the content is not relevant or doesn't contain useful information, respond wi
 Respond with only 'yes' or 'no'."""
 
     @staticmethod
-    def get_question_rewrite_prompt(original_question: str) -> str:
-        """Prompt for rewriting questions for better retrieval."""
+    def get_query_rewrite_prompt(original_query: str) -> str:
+        """Prompt for rewriting queries for better retrieval."""
         return f"""Look at the input and try to reason about the underlying semantic intent and meaning.
 
-Original question: {original_question}
+Original query: {original_query}
 
-Formulate an improved question that would be better for searching and finding relevant information:"""
+Formulate an improved query that would be better for searching and finding relevant information:"""
 
     @staticmethod
-    def get_answer_generation_prompt(question: str, context: str) -> str:
+    def get_answer_generation_prompt(history: str, context: str) -> str:
         """Prompt for generating final answers."""
-        return f"""You are an assistant for question-answering tasks. Use the following retrieved context to answer the question.
+        return f"""You are a conversational chatbot for question-answering tasks. Use the following retrieved context to interact with user.
 
 If you don't know the answer based on the context, just say that you don't know.
 Keep the answer concise and informative.
 
 When you use information from specific chunks, note the chunk IDs (marked as [CHUNK_ID: ...]) that you referenced.
 
-Question: {question}
-
 Context: {context}
+
+Conversation History: {history}
 
 Provide a structured response with:
 1. Your answer
