@@ -54,6 +54,15 @@ The bot uses the AgenticRAG system to:
 - Search through indexed documents
 - Provide contextually relevant answers
 - Maintain conversation history for follow-up questions
+- Display source chunk buttons for transparency
+
+### Chunk Reference Buttons
+
+When the bot provides answers based on document chunks:
+- Interactive buttons appear below the response
+- Each button represents a source document chunk used in the answer
+- Click any button to view the full content of that specific chunk
+- Buttons are labeled with chunk IDs for easy reference
 
 ### Image Support
 
@@ -62,6 +71,7 @@ When relevant images or diagrams are found in documents:
 - The response text is included as a caption
 - Multiple images (up to 10) can be sent together
 - Long responses are split across multiple messages if needed
+- Chunk reference buttons appear after images
 
 ### Error Handling
 
@@ -95,18 +105,25 @@ Container:
 ```
 User: "What is machine learning?"
 Bot: [Searches documents and provides relevant answer with supporting images if available]
+     [📄 chunk_1_2834] [📄 chunk_2_5791] - Click to view source chunks
 ```
 
 ### Follow-up Question
 ```
 User: "Can you explain more about neural networks?"
 Bot: [Uses conversation context to provide more specific information]
+     [📄 chunk_3_1847] [📄 chunk_4_9103] - Click to view source chunks
 ```
 
-### Technical Query
+### Viewing Source Chunks
 ```
-User: "Show me the architecture diagram for the system"
-Bot: [Finds and returns relevant diagrams with explanatory text]
+User: [Clicks on 📄 chunk_1_2834 button]
+Bot: 📄 Document Chunk: chunk_1_2834
+     📋 Document ID: ml_textbook_chapter_1
+     
+     Content:
+     Machine learning is a subset of artificial intelligence (AI) that focuses on...
+     [Full chunk content displayed]
 ```
 
 ## Limitations

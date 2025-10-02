@@ -4,12 +4,18 @@ import asyncio
 import io
 import base64
 from typing import Dict, List, Optional, Any
-from telegram import Update, ReplyKeyboardRemove
+from telegram import (
+    Update,
+    ReplyKeyboardRemove,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
     MessageHandler,
+    CallbackQueryHandler,
     filters,
 )
 from telegram.constants import ParseMode
@@ -18,6 +24,7 @@ from telegram.error import BadRequest, TimedOut, NetworkError
 from multimodal_rag.frameworks.logging_config import get_logger
 from multimodal_rag.usecases.langgraph_agent.agentic_rag import AgenticRAGUseCase
 from multimodal_rag.usecases.langgraph_agent.dtos import ChatMessage
+from multimodal_rag.usecases.langgraph_agent.dtos import AgentResponse
 
 logger = get_logger(__name__)
 
@@ -46,17 +53,24 @@ class TelegramBotService:
         self._max_caption_length = max_caption_length
         self._application: Optional[Application] = None
         self._user_conversations: Dict[str, List[ChatMessage]] = {}
+        self._user_chunks: Dict[
+            str, Dict[str, Any]
+        ] = {}  # Store chunks by user_id -> chunk_id -> chunk_data
 
     async def initialize(self) -> None:
         """Initialize the Telegram bot application."""
         try:
             self._application = Application.builder().token(self._token).build()
 
+            # Add handlers
             self._application.add_handler(CommandHandler("start", self._handle_start))
             self._application.add_handler(CommandHandler("help", self._handle_help))
             self._application.add_handler(CommandHandler("clear", self._handle_clear))
             self._application.add_handler(
                 MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
+            )
+            self._application.add_handler(
+                CallbackQueryHandler(self._handle_chunk_callback)
             )
 
             logger.info("Telegram bot initialized successfully")
@@ -73,6 +87,7 @@ class TelegramBotService:
         try:
             logger.info("Starting Telegram bot polling...")
 
+            # Initialize the application
             await self._application.initialize()
 
             # Start the updater manually for better control in async context
@@ -177,6 +192,9 @@ class TelegramBotService:
         if user_id in self._user_conversations:
             del self._user_conversations[user_id]
 
+        if user_id in self._user_chunks:
+            del self._user_chunks[user_id]
+
         await update.message.reply_text(
             "🗑️ Conversation history cleared! You can start fresh.",
             parse_mode=ParseMode.MARKDOWN,
@@ -215,7 +233,7 @@ class TelegramBotService:
 
             self._user_conversations[user_id] = conversation_history[-10:]
 
-            await self._send_agent_response(update, agent_response)
+            await self._send_agent_response(update, agent_response, user_id)
 
         except Exception as e:
             logger.error(f"Error processing message from {user_id}: {e}")
@@ -225,18 +243,56 @@ class TelegramBotService:
                 parse_mode=ParseMode.MARKDOWN,
             )
 
-    async def _send_agent_response(self, update: Update, agent_response) -> None:
-        """Send agent response with optional images."""
+    async def _send_agent_response(
+        self, update: Update, agent_response, user_id: str
+    ) -> None:
+        """Send agent response with optional images and chunk buttons."""
         try:
             response_text = agent_response.content
             pictures = agent_response.pictures
+            chunk_ids_used = agent_response.chunk_ids_used
+            retrieved_chunks = agent_response.retrieved_chunks
+
+            # Store chunks for callback access
+            if chunk_ids_used and retrieved_chunks:
+                if user_id not in self._user_chunks:
+                    self._user_chunks[user_id] = {}
+
+                # Map chunk IDs to chunk data for this user
+                for chunk_id, chunk in zip(chunk_ids_used, retrieved_chunks):
+                    self._user_chunks[user_id][chunk_id] = {
+                        "text": chunk.text,
+                        "document_id": chunk.document_id,
+                        "chunk_id": chunk_id,
+                    }
+
+            # Create inline keyboard for chunk IDs if available
+            reply_markup = None
+            if chunk_ids_used:
+                chunk_buttons = []
+                # Create buttons in rows of 2
+                for i in range(0, len(chunk_ids_used), 2):
+                    row = []
+                    for j in range(i, min(i + 2, len(chunk_ids_used))):
+                        chunk_id = chunk_ids_used[j]
+                        button_text = f"📄 {chunk_id}"
+                        row.append(
+                            InlineKeyboardButton(button_text, callback_data=chunk_id)
+                        )
+                    chunk_buttons.append(row)
+
+                reply_markup = InlineKeyboardMarkup(chunk_buttons)
 
             # If there are pictures, send them as a media group with caption
             if pictures:
-                await self._send_response_with_pictures(update, response_text, pictures)
+                await self._send_response_with_pictures(
+                    update, response_text, pictures, reply_markup
+                )
             else:
                 # Send text-only response
-                await self._send_text_response(update, response_text)
+                await self._send_text_response(
+                    update, response_text, reply_markup=reply_markup
+                )
 
         except Exception as e:
             logger.error(f"Error sending agent response: {e}")
@@ -245,8 +301,70 @@ class TelegramBotService:
                 parse_mode=ParseMode.MARKDOWN,
             )
 
+    async def _handle_chunk_callback(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        """Handle callback queries from chunk ID buttons."""
+        query = update.callback_query
+        user_id = str(query.from_user.id)
+        chunk_id = query.data
+
+        logger.info(f"User {user_id} requested chunk: {chunk_id}")
+
+        try:
+            # Answer the callback query first
+            await query.answer()
+
+            # Get chunk data
+            user_chunks = self._user_chunks.get(user_id, {})
+            chunk_data = user_chunks.get(chunk_id)
+
+            if not chunk_data:
+                await query.edit_message_text(
+                    "❌ Chunk not found or expired. Please send a new message.",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+                return
+
+            # Format chunk content
+            chunk_text = chunk_data.get("text", "No content available")
+            document_id = chunk_data.get("document_id", "Unknown")
+
+            # Truncate if too long
+            max_chunk_length = 3000  # Leave room for formatting
+            if len(chunk_text) > max_chunk_length:
+                chunk_text = chunk_text[:max_chunk_length] + "..."
+
+            chunk_message = (
+                f"📄 **Document Chunk: {chunk_id}**\n\n"
+                f"📋 **Document ID:** `{document_id}`\n\n"
+                f"**Content:**\n{chunk_text}"
+            )
+
+            # Send chunk content as a new message
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=chunk_message,
+                parse_mode=ParseMode.MARKDOWN,
+            )
+
+        except Exception as e:
+            logger.error(f"Error handling chunk callback: {e}")
+            try:
+                await query.edit_message_text(
+                    "❌ Error retrieving chunk content. Please try again.",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+            except Exception:
+                # If edit fails, send a new message
+                await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text="❌ Error retrieving chunk content. Please try again.",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+
     async def _send_response_with_pictures(
-        self, update: Update, text: str, pictures: List[Any]
+        self, update: Update, text: str, pictures: List[Any], reply_markup=None
     ) -> None:
         """Send response with pictures as media group."""
         try:
@@ -295,28 +413,44 @@ class TelegramBotService:
                     continue
 
             if media_group:
-                await update.message.reply_media_group(media=media_group)
+                await update.message.reply_media_group(
+                    media=media_group, read_timeout=60
+                )
 
                 # If text was truncated, send the remaining text
                 if len(text) > self._max_caption_length:
                     remaining_text = text[self._max_caption_length :]
                     await self._send_text_response(
-                        update, remaining_text, is_continuation=True
+                        update,
+                        remaining_text,
+                        is_continuation=True,
+                        reply_markup=reply_markup,
+                    )
+                elif reply_markup:
+                    # Send chunk buttons separately if we have them
+                    await update.message.reply_text(
+                        "📚 **View Source Chunks:**",
+                        reply_markup=reply_markup,
+                        parse_mode=ParseMode.MARKDOWN,
                     )
             else:
                 # If no valid pictures, send text only
-                await self._send_text_response(update, text)
+                await self._send_text_response(update, text, reply_markup=reply_markup)
 
         except (BadRequest, TimedOut, NetworkError) as e:
             logger.error(f"Telegram API error sending pictures: {e}")
             # Fallback to text-only response
-            await self._send_text_response(update, text)
+            await self._send_text_response(update, text, reply_markup=reply_markup)
         except Exception as e:
             logger.error(f"Unexpected error sending pictures: {e}")
-            await self._send_text_response(update, text)
+            await self._send_text_response(update, text, reply_markup=reply_markup)
 
     async def _send_text_response(
-        self, update: Update, text: str, is_continuation: bool = False
+        self,
+        update: Update,
+        text: str,
+        is_continuation: bool = False,
+        reply_markup=None,
     ) -> None:
         """Send text-only response, handling long messages."""
         try:
@@ -328,6 +462,7 @@ class TelegramBotService:
                 await update.message.reply_text(
                     text,
                     parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=reply_markup,
                 )
             else:
                 # Send in chunks
@@ -336,9 +471,13 @@ class TelegramBotService:
                     if i > 0:
                         chunk = f"📄 *Continued ({i + 1}/{len(chunks)}):*\n\n{chunk}"
 
+                    # Only add reply_markup to the last chunk
+                    chunk_markup = reply_markup if i == len(chunks) - 1 else None
+
                     await update.message.reply_text(
                         chunk,
                         parse_mode=ParseMode.MARKDOWN,
+                        reply_markup=chunk_markup,
                     )
 
                     # Small delay between messages to avoid rate limiting
