@@ -77,3 +77,7 @@ reset and get the password for the user
 ```
 docker exec -it es01 /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic
 ```
+
+# TODO List
+
+* refactor the DoclingDocument name into Document and just refect to real docling document with that name

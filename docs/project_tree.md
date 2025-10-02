@@ -1,7 +1,11 @@
 # MultiModal RAG Project Structure
 
 ## Overview
-This project implements a Clean Architecture approach for a Multi-Modal RAG system with Elasticsearch integration for document and chunk indexing, and Google GenAI services for embeddings and LLM operations.
+This project implemen9. **Agentic RAG**: Intelligent document retrieval with LangGraph workflow
+10. **Picture Retrieval**: Automatic retrieval of associated pictures from document chunks
+11. **Dependency Injection**: Proper DI container setup for all services
+12. **Conversation Management**: Chat session handling with context preservation
+13. **Modular Architecture**: Telegram bot components separated by concerns for maintainability Clean Architecture approach for a Multi-Modal RAG system with Elasticsearch integration for document and chunk indexing, and Google GenAI services for embeddings and LLM operations.
 
 ## Current Implementation
 
@@ -45,6 +49,13 @@ This project implements a Clean Architecture approach for a Multi-Modal RAG syst
 - `logging_config.py`: Logging configuration
 - `google_genai_embedding_service.py`: Google GenAI embedding service implementation
 - `google_genai_llm_service.py`: Google GenAI LLM service implementation
+- `telegram_bot_service.py`: Main entry point for Telegram bot service
+- `telegram_bot/`: Modular Telegram bot implementation
+  - `telegram_bot_service.py`: Core bot service and orchestrator
+  - `conversation_manager.py`: User conversation and chat history management
+  - `chunk_manager.py`: Document chunk storage and retrieval
+  - `response_formatter.py`: Message formatting and sending utilities
+  - `message_handlers.py`: Command and message handling logic
 
 #### Config (`multimodal_rag/config/`)
 - Configuration and settings objects for the application
