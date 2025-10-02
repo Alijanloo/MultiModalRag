@@ -28,8 +28,11 @@ uv run python examples/telegram_bot_example.py
 - **Image Support**: Automatic display of relevant images from documents  
 - **Source Transparency**: Interactive buttons to view source document chunks
 - **Conversation Context**: Maintains chat history for follow-up questions
+- **Commands Menu**: Easy access to commands via the input bar menu button
 
 ## Commands
+
+Available through the commands menu button (☰) next to the input field:
 
 - `/start` - Initialize conversation
 - `/help` - Show help information  
@@ -82,3 +85,7 @@ response_formatter = ResponseFormatter()
 - **New Commands**: Extend `MessageHandlers`
 - **Response Types**: Modify `ResponseFormatter`  
 - **Conversation Logic**: Update `ConversationManager`
+
+## Documentation
+
+For detailed implementation and methods guidance of **telegram.ext.Application**, see: `docs/telegram_bot/bot_class.md`

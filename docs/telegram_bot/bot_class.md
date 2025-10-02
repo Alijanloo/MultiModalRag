@@ -1,8 +1,7 @@
-Here is a Markdown-converted version of the **Bot** class documentation from **python-telegram-bot v22.5** (from the page you linked) — this is a summarized rendition, not a full line-by-line mirror (the original is very long). You can use this as a starting point and expand sections as needed.
+Here is the **telegram.ext.Application** class documentation from **python-telegram-bot v22.5**.
 
 ---
 
-````markdown
 # Bot
 
 ```python
@@ -16,7 +15,7 @@ class telegram.Bot(
     private_key_password=None,
     local_mode=False
 )
-````
+```
 
 **Bases:** `telegram.TelegramObject`, `contextlib.AbstractAsyncContextManager`
 

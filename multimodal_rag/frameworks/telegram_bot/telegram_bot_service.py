@@ -9,7 +9,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     filters,
 )
-from telegram import Update
+from telegram import Update, BotCommand
 
 from multimodal_rag.frameworks.logging_config import get_logger
 from multimodal_rag.usecases.langgraph_agent.agentic_rag import AgenticRAGUseCase
@@ -85,6 +85,22 @@ class TelegramBotService:
             logger.error(f"Failed to initialize Telegram bot: {e}")
             raise
 
+    async def _setup_bot_commands(self) -> None:
+        """Set up the bot commands menu that appears in the user's input bar."""
+        try:
+            commands = [
+                BotCommand("start", "Start conversation with the assistant"),
+                BotCommand("help", "Show help information and usage instructions"),
+                BotCommand("clear", "Clear conversation history"),
+            ]
+
+            await self._application.bot.set_my_commands(commands)
+            logger.info("Bot commands menu configured successfully")
+
+        except Exception as e:
+            logger.error(f"Failed to set up bot commands menu: {e}")
+            raise
+
     async def start_polling(self) -> None:
         """Start the bot with polling mode."""
         if not self._application:
@@ -95,6 +111,9 @@ class TelegramBotService:
 
             # Initialize the application
             await self._application.initialize()
+
+            # Set up bot commands menu
+            await self._setup_bot_commands()
 
             # Start the updater manually for better control in async context
             await self._application.updater.start_polling(
