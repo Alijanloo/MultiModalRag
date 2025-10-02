@@ -21,7 +21,7 @@ async def main():
 
     try:
         # Get agentic RAG use case from the container
-        agentic_rag = container.agentic_rag_use_case()
+        agentic_rag = await container.agentic_rag_use_case()
 
         # Example conversation
         chat_id = "example_chat_001"
@@ -29,10 +29,8 @@ async def main():
 
         # Example queries
         queries = [
-            "Hello! How can you help me?",
-            "What information do you have about machine learning?",
-            "Can you explain the details about neural networks?",
-            "Show me any images related to deep learning architecture",
+            # "Hello! How can you help me?",
+            "how does narrow band imaging help in distinguishing the columnar mucosa from the surrounding squamous mucosa?",
         ]
 
         for query in queries:
