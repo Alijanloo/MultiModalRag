@@ -10,6 +10,7 @@ from elastic_transport.client_utils import DEFAULT
 from multimodal_rag.adaptors.elasticsearch.elasticsearch_config import ElasticsearchConfig
 from multimodal_rag.frameworks.google_genai_embedding_service import GoogleGenAIEmbeddingService
 from multimodal_rag.frameworks.google_genai_llm_service import GoogleGenAILLMService
+from multimodal_rag.frameworks.telegram_bot_service import TelegramBotService
 from multimodal_rag.adaptors.elasticsearch.elasticsearch_adaptor import ElasticsearchDocumentAdaptor
 from multimodal_rag.usecases.document_indexing import DocumentIndexingUseCase
 from multimodal_rag.usecases.document_search import DocumentSearchUseCase
@@ -123,6 +124,15 @@ class ApplicationContainer(containers.DeclarativeContainer):
         llm_service=llm_service,
         index_name=elasticsearch_config.provided.index_name,
         retrieval_size=elasticsearch_config.provided.default_search_size,
+    )
+
+    # Telegram Bot Service
+    telegram_bot_service = providers.Factory(
+        TelegramBotService,
+        token=config.telegram.bot_token,
+        agentic_rag_use_case=agentic_rag_use_case,
+        max_message_length=config.telegram.max_message_length,
+        max_caption_length=config.telegram.max_caption_length,
     )
 
 

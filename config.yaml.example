@@ -22,6 +22,11 @@ google_genai:
   embedding_model: "gemini-embedding-001"
   embedding_dimensions: 768
 
+telegram:
+  bot_token: "your_telegram_bot_token_here"
+  max_message_length: 4096
+  max_caption_length: 1024
+
 logging:
   level: INFO
   use_colors: true
