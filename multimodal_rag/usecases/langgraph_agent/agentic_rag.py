@@ -107,9 +107,7 @@ class AgenticRAGUseCase:
                 formatted_content = []
                 for i, chunk in enumerate(chunks, 1):
                     chunk_id = f"chunk_{i}_{hash(chunk.text) % 10000}"
-                    content = f"[CHUNK_ID: {chunk_id}]\nDocument {i}:\n{chunk.text}"
-                    if chunk.meta and chunk.meta.headings:
-                        content = f"[CHUNK_ID: {chunk_id}]\nDocument {i} (Headings: {chunk.meta.headings}):\n{chunk.text}"
+                    content = f"[CHUNK_ID: {chunk_id}]\n{chunk.text}"
                     formatted_content.append(content)
 
                 tool_message = ToolMessage(
@@ -432,13 +430,15 @@ class AgenticRAGUseCase:
                 ):
                     doc_items = chunk.meta.doc_items
                     for item in doc_items:
-                        if hasattr(item, "label") and "picture" in item.label.lower():
-                            picture_id = getattr(item, "picture_id", None)
-                            document_id = chunk.document_id
+                        if (
+                            isinstance(item, dict)
+                            and item.get("label", "") == "picture"
+                        ):
+                            picture_id = item.get("self_ref", "").split("/")[-1]
 
-                            if picture_id and document_id:
+                            if picture_id:
                                 picture = await self._document_repository.get_picture(
-                                    document_id=document_id,
+                                    document_id=chunk.document_id,
                                     picture_id=picture_id,
                                     index_name=self._index_name,
                                 )
