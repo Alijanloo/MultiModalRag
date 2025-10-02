@@ -50,8 +50,9 @@ def create_document_entities_from_docling(
         for prov_data in text_dict.get("prov", []):
             prov_list.append(Provenance.from_elastic_data(prov_data))
 
+        text_id = text_dict.get("self_ref", "").split("//")[-1] if text_dict.get("self_ref") else str(i)
         text_element = DocumentText(
-            text_id=f"{document_id}_text_{i}",
+            text_id=f"{document_id}_text_{text_id}",
             document_id=document_id,
             text=text_dict.get("text", ""),
             label=text_dict.get("label", "text"),
@@ -81,8 +82,9 @@ def create_document_entities_from_docling(
         if "image" in pic_dict:
             image_data = ImageData.from_elastic_data(pic_dict["image"])
 
+        picture_id = pic_dict.get("self_ref", "").split("//")[-1] if pic_dict.get("self_ref") else str(i)
         picture_element = DocumentPicture(
-            picture_id=f"{document_id}_picture_{i}",
+            picture_id=f"{document_id}_picture_{picture_id}",
             document_id=document_id,
             label=pic_dict.get("label", "picture"),
             prov=prov_list,
@@ -115,8 +117,9 @@ def create_document_entities_from_docling(
         if "data" in table_dict:
             table_data_obj = TableData.from_elastic_data(table_dict["data"])
 
+        table_id = table_dict.get("self_ref", "").split("//")[-1] if table_dict.get("self_ref") else str(i)
         table_element = DocumentTable(
-            table_id=f"{document_id}_table_{i}",
+            table_id=f"{document_id}_table_{table_id}",
             document_id=document_id,
             label=table_dict.get("label", "table"),
             prov=prov_list,

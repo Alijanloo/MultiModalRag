@@ -96,23 +96,23 @@ class IDocumentIndexRepository(ABC):
 
     @abstractmethod
     async def get_picture(
-        self, picture_id: str, index_name: Optional[str] = None
+        self, document_id: str, picture_id: str, index_name: Optional[str] = None
     ) -> Optional[DocumentPicture]:
-        """Get a picture by picture_id."""
+        """Get a picture by document_id and picture_id."""
         pass
 
     @abstractmethod
     async def get_text(
-        self, text_id: str, index_name: Optional[str] = None
+        self, document_id: str, text_id: str, index_name: Optional[str] = None
     ) -> Optional[DocumentText]:
-        """Get a text by text_id."""
+        """Get a text by document_id and text_id."""
         pass
 
     @abstractmethod
     async def get_table(
-        self, table_id: str, index_name: Optional[str] = None
+        self, document_id: str, table_id: str, index_name: Optional[str] = None
     ) -> Optional[DocumentTable]:
-        """Get a table by table_id."""
+        """Get a table by document_id and table_id."""
         pass
 
     @abstractmethod
