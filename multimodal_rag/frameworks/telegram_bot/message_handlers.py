@@ -1,5 +1,6 @@
 """Message handlers for Telegram bot commands and messages."""
 
+import asyncio
 from typing import TYPE_CHECKING
 from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import ContextTypes
@@ -23,6 +24,25 @@ class MessageHandlers:
             bot_service: Reference to the main bot service
         """
         self._bot_service = bot_service
+
+    async def _show_typing_continuously(self, context: ContextTypes.DEFAULT_TYPE, chat_id: int, stop_event: asyncio.Event) -> None:
+        """Show typing indicator continuously until stopped.
+        
+        Args:
+            context: Bot context for sending chat actions
+            chat_id: Chat ID to send typing action to
+            stop_event: Event to signal when to stop showing typing
+        """
+        try:
+            while not stop_event.is_set():
+                await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=4.0)
+                    break
+                except asyncio.TimeoutError:
+                    continue
+        except Exception as e:
+            logger.error(f"Error in continuous typing: {e}")
 
     async def handle_start(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -107,9 +127,11 @@ class MessageHandlers:
             f"Processing message from {user.first_name} ({user_id}): {message_text}"
         )
 
-        # Show typing action
-        await context.bot.send_chat_action(
-            chat_id=update.effective_chat.id, action="typing"
+        stop_typing_event = asyncio.Event()
+        typing_task = asyncio.create_task(
+            self._show_typing_continuously(
+                context, update.effective_chat.id, stop_typing_event
+            )
         )
 
         try:
@@ -125,7 +147,6 @@ class MessageHandlers:
                 conversation_history=conversation_history,
             )
 
-            # Update conversation history
             self._bot_service._conversation_manager.add_user_message(
                 user_id, message_text
             )
@@ -144,6 +165,12 @@ class MessageHandlers:
                 "Please try again or contact support if the issue persists.",
                 parse_mode=ParseMode.MARKDOWN,
             )
+        finally:
+            stop_typing_event.set()
+            try:
+                await typing_task
+            except Exception as e:
+                logger.error(f"Error stopping typing task: {e}")
 
     async def handle_chunk_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
