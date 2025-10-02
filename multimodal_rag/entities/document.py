@@ -374,19 +374,18 @@ class DocChunk(BaseModel):
 
     text: str
     meta: DocMeta
+    document_id: str
     vector: Optional[List[float]] = Field(
         default=None, description="Vector embedding for semantic search"
     )
 
-    def to_elastic_data(self, document_id: Optional[str] = None) -> Dict[str, Any]:
+    def to_elastic_data(self) -> Dict[str, Any]:
         """Convert to Elasticsearch indexing format."""
         chunk_data = {
             "text": self.text,
+            "document_id": self.document_id,
             "meta": self.meta.model_dump(mode="json"),
         }
-
-        if document_id:
-            chunk_data["document_id"] = document_id
 
         if self.vector:
             chunk_data["vector"] = self.vector
@@ -395,7 +394,10 @@ class DocChunk(BaseModel):
 
     @classmethod
     def from_docling_chunk(
-        cls, dl_chunk: DLDocChunk, vector: Optional[List[float]] = None
+        cls,
+        dl_chunk: DLDocChunk,
+        document_id: str,
+        vector: Optional[List[float]] = None,
     ) -> "DocChunk":
         """Create entity from Docling chunk."""
         origin = None
@@ -416,7 +418,9 @@ class DocChunk(BaseModel):
             origin=origin,
         )
 
-        return cls(text=dl_chunk.text, meta=meta, vector=vector)
+        return cls(
+            text=dl_chunk.text, meta=meta, document_id=document_id, vector=vector
+        )
 
     @classmethod
     def from_elastic_hit(cls, hit_data: Dict[str, Any]) -> "DocChunk":
@@ -445,6 +449,7 @@ class DocChunk(BaseModel):
 
         return cls(
             text=chunk_data.get("text", ""),
+            document_id=chunk_data.get("document_id", ""),
             meta=meta,
             vector=chunk_data.get("vector"),
         )
