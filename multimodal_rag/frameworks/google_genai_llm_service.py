@@ -57,7 +57,7 @@ class GoogleGenAILLMService(LLMServiceInterface):
         self._max_retries = max_retries
 
         self._client = genai.Client(
-            api_key=self._api_keys[0], http_options=HttpOptions(timeout=5000)
+            api_key=self._api_keys[0], http_options=HttpOptions(timeout=60000)
         )
         self._default_model = default_model
         self._max_retries = max_retries
@@ -82,7 +82,7 @@ class GoogleGenAILLMService(LLMServiceInterface):
         new_api_key = self._api_keys[self._token_index]
 
         self._client = genai.Client(
-            api_key=new_api_key, http_options=HttpOptions(timeout=5000)
+            api_key=new_api_key, http_options=HttpOptions(timeout=60000)
         )
 
         logger.info(f"Switched to API key index {self._token_index}")
