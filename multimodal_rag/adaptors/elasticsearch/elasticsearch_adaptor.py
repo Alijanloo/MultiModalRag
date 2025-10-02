@@ -493,9 +493,9 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             return None
 
     async def get_picture(
-        self, document_id: str, picture_id: str, index_name: Optional[str] = None
+        self, picture_id: str, index_name: Optional[str] = None
     ) -> Optional[DocumentPicture]:
-        """Get a picture by document_id and picture_id."""
+        """Get a picture by picture_id."""
         try:
             index_name = index_name or self._index_name
 
@@ -503,7 +503,6 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                 "bool": {
                     "must": [
                         {"exists": {"field": "picture"}},
-                        {"term": {"picture.document_id": document_id}},
                         {"term": {"picture.picture_id": picture_id}},
                     ]
                 }
@@ -518,9 +517,63 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             return None
 
         except Exception as e:
-            logger.error(
-                f"Failed to get picture {picture_id} for document {document_id}: {e}"
-            )
+            logger.error(f"Failed to get picture {picture_id}: {e}")
+            return None
+
+    async def get_text(
+        self, text_id: str, index_name: Optional[str] = None
+    ) -> Optional[DocumentText]:
+        """Get a text by text_id."""
+        try:
+            index_name = index_name or self._index_name
+
+            query = {
+                "bool": {
+                    "must": [
+                        {"exists": {"field": "text"}},
+                        {"term": {"text.text_id": text_id}},
+                    ]
+                }
+            }
+
+            result = await self._es.search(index=index_name, size=1, query=query)
+
+            if result["hits"]["hits"]:
+                hit = result["hits"]["hits"][0]
+                return DocumentText.from_elastic_hit(hit["_source"])
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to get text {text_id}: {e}")
+            return None
+
+    async def get_table(
+        self, table_id: str, index_name: Optional[str] = None
+    ) -> Optional[DocumentTable]:
+        """Get a table by table_id."""
+        try:
+            index_name = index_name or self._index_name
+
+            query = {
+                "bool": {
+                    "must": [
+                        {"exists": {"field": "table"}},
+                        {"term": {"table.table_id": table_id}},
+                    ]
+                }
+            }
+
+            result = await self._es.search(index=index_name, size=1, query=query)
+
+            if result["hits"]["hits"]:
+                hit = result["hits"]["hits"][0]
+                return DocumentTable.from_elastic_hit(hit["_source"])
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to get table {table_id}: {e}")
             return None
 
     async def search_chunks(
