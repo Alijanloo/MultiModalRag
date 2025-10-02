@@ -45,7 +45,7 @@ async def load_sample_data() -> tuple[
         chunk_data = json.load(f)
 
     # Create mock DocChunk entity with sample vector
-    sample_vector = [0.1] * 1536  # Mock embedding vector
+    sample_vector = [0.1] * 768  # Mock embedding vector
     chunk = DocChunk(
         text=chunk_data["text"], meta=chunk_data["meta"], vector=sample_vector
     )

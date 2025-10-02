@@ -24,7 +24,7 @@ class TestAgenticRAGUseCase:
                     doc_items=[],
                     headings=["Introduction to ML"]
                 ),
-                vector=[0.1] * 1536,
+                vector=[0.1] * 768,
                 document_id="doc_1",
             )
         ]
@@ -40,7 +40,7 @@ class TestAgenticRAGUseCase:
     def mock_embedding_service(self):
         """Mock embedding service."""
         service = AsyncMock()
-        service.embed_single.return_value = [0.1] * 1536
+        service.embed_single.return_value = [0.1] * 768
         return service
 
     @pytest.fixture

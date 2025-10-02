@@ -80,7 +80,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
                         },
                         "vector": {
                             "type": "dense_vector",
-                            "dims": 1536,  # Default for OpenAI embeddings, adjust as needed
+                            "dims": 768,  # Default for OpenAI embeddings, adjust as needed
                             "index": True,
                             "similarity": "cosine",
                         },
@@ -146,7 +146,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         self,
         elasticsearch_client: AsyncElasticsearch,
         index_name: str = DEFAULT_INDEX,
-        vector_dimensions: int = 1536,
+        vector_dimensions: int = 768,
     ):
         """Initialize the Elasticsearch adaptor.
 

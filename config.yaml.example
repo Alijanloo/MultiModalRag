@@ -10,7 +10,7 @@ elasticsearch:
   use_ssl: false
   ca_certs: null
   index_name: multimodal_index
-  vector_dimensions: 1536
+  vector_dimensions: 768
   shards: 1
   replicas: 0
   default_search_size: 10

@@ -17,7 +17,7 @@ class ElasticsearchConfig(BaseModel):
     
     # Index settings
     index_name: str = Field(default="multimodal_index", description="Index for documents and chunks")
-    vector_dimensions: int = Field(default=1536, description="Dimension of embedding vectors")
+    vector_dimensions: int = Field(default=768, description="Dimension of embedding vectors")
     
     # Index configurations
     shards: int = Field(default=1)
