@@ -105,9 +105,8 @@ class AgenticRAGUseCase:
                     )
 
                 formatted_content = []
-                for i, chunk in enumerate(chunks, 1):
-                    chunk_id = f"chunk_{i}_{hash(chunk.text) % 10000}"
-                    content = f"[CHUNK_ID: {chunk_id}]\n{chunk.text}"
+                for chunk in chunks:
+                    content = f"[CHUNK_ID: {chunk.chunk_id}]\n{chunk.text}"
                     formatted_content.append(content)
 
                 tool_message = ToolMessage(
@@ -410,14 +409,9 @@ class AgenticRAGUseCase:
             chunks_used = []
             pictures = []
 
-            chunk_id_to_chunk = {}
-            for i, chunk in enumerate(retrieved_chunks, 1):
-                chunk_id = f"chunk_{i}_{hash(chunk.text) % 10000}"
-                chunk_id_to_chunk[chunk_id] = chunk
-
-            for chunk_id in chunk_ids_used:
-                if chunk_id in chunk_id_to_chunk:
-                    chunks_used.append(chunk_id_to_chunk[chunk_id])
+            for chunk in retrieved_chunks:
+                if chunk.chunk_id in chunk_ids_used:
+                    chunks_used.append(chunk)
 
             if not chunk_ids_used:
                 chunks_used.extend(retrieved_chunks)

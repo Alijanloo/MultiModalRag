@@ -372,6 +372,7 @@ class DocMeta(BaseModel):
 class DocChunk(BaseModel):
     """Entity representing a document chunk with vector embeddings."""
 
+    chunk_id: Optional[str] = None
     text: str
     meta: DocMeta
     document_id: str
@@ -382,6 +383,7 @@ class DocChunk(BaseModel):
     def to_elastic_data(self) -> Dict[str, Any]:
         """Convert to Elasticsearch indexing format."""
         chunk_data = {
+            "chunk_id": self.chunk_id,
             "text": self.text,
             "document_id": self.document_id,
             "meta": self.meta.model_dump(mode="json"),
@@ -397,9 +399,11 @@ class DocChunk(BaseModel):
         cls,
         dl_chunk: DLDocChunk,
         document_id: str,
+        chunk_index: int,
         vector: Optional[List[float]] = None,
     ) -> "DocChunk":
         """Create entity from Docling chunk."""
+        chunk_id = f"{document_id}_chunk_{chunk_index}"
         origin = None
         if dl_chunk.meta.origin:
             origin = DocumentOrigin(
@@ -419,7 +423,11 @@ class DocChunk(BaseModel):
         )
 
         return cls(
-            text=dl_chunk.text, meta=meta, document_id=document_id, vector=vector
+            chunk_id=chunk_id,
+            text=dl_chunk.text,
+            meta=meta,
+            document_id=document_id,
+            vector=vector,
         )
 
     @classmethod
@@ -448,6 +456,7 @@ class DocChunk(BaseModel):
         )
 
         return cls(
+            chunk_id=chunk_data.get("chunk_id", ""),
             text=chunk_data.get("text", ""),
             document_id=chunk_data.get("document_id", ""),
             meta=meta,

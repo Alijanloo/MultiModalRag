@@ -217,7 +217,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         try:
             index_name = index_name or self._index_name
 
-            chunk_data = chunk.to_elastic_data(document_id=document_id)
+            chunk_data = chunk.to_elastic_data()
 
             result = await self._es.index(
                 index=index_name, id=chunk_id, document=chunk_data
@@ -311,16 +311,18 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         errors = []
 
         actions = []
-        for i, chunk in enumerate(chunks):
+        for chunk in chunks:
             try:
-                chunk_id = f"{document_id}_chunk_{i}"
-                chunk_data = chunk.to_elastic_data(document_id=document_id)
-
-                action = {"_index": index_name, "_id": chunk_id, "_source": chunk_data}
+                chunk_data = chunk.to_elastic_data()
+                action = {
+                    "_index": index_name,
+                    "_id": chunk.chunk_id,
+                    "_source": chunk_data,
+                }
                 actions.append(action)
             except Exception as e:
                 failed_count += 1
-                error_msg = f"Failed to prepare chunk {i}: {e}"
+                error_msg = f"Failed to prepare chunk {chunk.chunk_id}: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)
 
@@ -493,10 +495,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
             return None
 
     async def get_picture(
-        self, 
-        document_id: str,
-        picture_id: str,
-        index_name: Optional[str] = None
+        self, document_id: str, picture_id: str, index_name: Optional[str] = None
     ) -> Optional[DocumentPicture]:
         """Get a picture by document_id and picture_id."""
         try:
@@ -530,7 +529,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         try:
             index_name = index_name or self._index_name
             text_id = f"{document_id}_text_{text_id}"
-            
+
             query = {
                 "bool": {
                     "must": [
@@ -559,7 +558,7 @@ class ElasticsearchDocumentAdaptor(IDocumentIndexRepository):
         try:
             index_name = index_name or self._index_name
             table_id = f"{document_id}_table_{table_id}"
-            
+
             query = {
                 "bool": {
                     "must": [

@@ -274,8 +274,8 @@ class DocumentIndexingUseCase:
                 chunk_iter = chunker.chunk(dl_doc=dl_doc)
                 chunks = []
 
-                for dl_chunk in chunk_iter:
-                    chunk = DocChunk.from_docling_chunk(dl_chunk)
+                for i, dl_chunk in enumerate(chunk_iter):
+                    chunk = DocChunk.from_docling_chunk(dl_chunk, document_id, i)
                     chunk.text = chunker.contextualize(chunk=dl_chunk)
                     chunks.append(chunk)
 
