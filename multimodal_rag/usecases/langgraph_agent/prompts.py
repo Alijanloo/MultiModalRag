@@ -53,15 +53,10 @@ Formulate an improved query that would be better for searching and finding relev
 If you don't know the answer based on the context, just say that you don't know.
 Keep the answer concise and informative.
 
-When you use information from specific chunks, note the chunk IDs (marked as [CHUNK_ID: ...]) that you referenced.
-
 Context: {context}
 
 Conversation History: {history}
-
-Provide a structured response with:
-1. Your answer
-2. The chunk IDs you used (if any)"""
+"""
 
     @staticmethod
     def get_retriever_tool_definition() -> dict:
