@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Any, Optional
 from multimodal_rag.frameworks.logging_config import get_logger
+from multimodal_rag.frameworks.telegram_bot.utils import escape_markdown
 
 logger = get_logger(__name__)
 
@@ -101,8 +102,13 @@ class ChunkManager:
         if len(chunk_text) > max_length:
             chunk_text = chunk_text[:max_length] + "..."
 
+        # Escape Markdown special characters in the content
+        chunk_text = escape_markdown(chunk_text)
+        chunk_id = escape_markdown(chunk_id)
+        document_id = escape_markdown(document_id)
+
         return (
-            f"📄 **Document Chunk: {chunk_id}**\n\n"
-            f"📋 **Document ID:** `{document_id}`\n\n"
-            f"**Content:**\n{chunk_text}"
+            f"📄 *Document Chunk: {chunk_id}*\n\n"
+            f"📋 *Document ID:* `{document_id}`\n\n"
+            f"*Content:*\n{chunk_text}"
         )

@@ -9,6 +9,7 @@ from telegram.constants import ParseMode
 from telegram.error import BadRequest, TimedOut, NetworkError
 
 from multimodal_rag.frameworks.logging_config import get_logger
+from multimodal_rag.frameworks.telegram_bot.utils import escape_markdown
 
 logger = get_logger(__name__)
 
@@ -38,7 +39,7 @@ class ResponseFormatter:
     ) -> None:
         """Send agent response with optional images and chunk buttons."""
         try:
-            response_text = agent_response.content
+            response_text = escape_markdown(agent_response.content)
             pictures = agent_response.pictures
             chunk_ids_used = agent_response.chunk_ids_used
             retrieved_chunks = agent_response.retrieved_chunks
@@ -49,16 +50,13 @@ class ResponseFormatter:
                     user_id, chunk_ids_used, retrieved_chunks
                 )
 
-            # Create inline keyboard for chunk IDs if available
             reply_markup = self._create_chunk_buttons(chunk_ids_used)
 
-            # If there are pictures, send them as a media group with caption
             if pictures:
                 await self._send_response_with_pictures(
                     update, response_text, pictures, reply_markup
                 )
             else:
-                # Send text-only response
                 await self._send_text_response(
                     update, response_text, reply_markup=reply_markup
                 )
