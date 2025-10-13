@@ -1,0 +1,70 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb, geometry, fancyhdr, cite}
+\geometry{margin=2.5cm}
+\renewcommand\citeleft{}  % no opening or closing brackets
+\renewcommand\citeright{}
+\usepackage[colorlinks,citecolor=blue]{hyperref}
+\usepackage{xepersian}
+\defpersianfont\Vazir[Scale=1]{Vazirmatn}
+\settextfont{Vazirmatn}
+
+% Fix header height warning
+\setlength{\headheight}{14.49998pt}
+\addtolength{\topmargin}{-2.49998pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{MultiModal Agentic RAG}
+\fancyhead[R]{صفحه \thepage}
+\fancyfoot[C]{سال ۱۴۰۴}
+
+
+\setcounter{secnumdepth}{5}
+\setcounter{tocdepth}{5}
+
+% Custom command for LTR sections
+\newcommand{\LTRSection}[1]{%
+    \LTR\section{\textsf{#1}}
+}
+
+\begin{document}
+
+% ------- Title Page -------
+\thispagestyle{empty}
+\begin{center}
+    \vspace*{2cm}
+    \Huge{دانشگاه فردوسی مشهد} \\[0.5cm]
+    \Large{دانشکده علوم ریاضی} \\[2cm]
+    \Huge{\textbf{کاربردهای الگوریتم‌های زمان‌بندی}} \\[2cm]
+    \Large{
+        \textbf{درس:} پروژه کارشناسی \\
+        \textbf{استاد درس:} دکتر جلال‌الدّین نصیری
+    } \\[2cm]
+    \Large{
+        \textbf{دانشجو:} علی محمودجانلو
+        \textbf{موضوع پروژه:} MultiModal Agentic RAG
+    } \\[3cm]
+    \Large{سال ۱۴۰۴}
+\end{center}
+
+\newpage
+
+% ------- Content Page -------
+\thispagestyle{empty}
+\hypersetup{linkcolor=blue}
+\tableofcontents
+\newpage
+
+% ------- Content -------
+
+% Include the template sections
+\input{section_template}
+
+% ------- References Page -------
+\newpage
+\LTRSection{References}
+\begin{thebibliography}{10}
+    \bibitem[1]{ref-1} C. Ribeiro, “Sports scheduling: Problems and applications,” International Transactions in Operational Research, vol.19, pp.201–226, Jan. 2012.
+\end{thebibliography}
+\end{document}
