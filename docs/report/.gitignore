@@ -1,9 +1,11 @@
 # Ignore all files
 *
 
-# But keep PDF and TeX files
+# But keep specific file types
 !*.pdf
 !*.tex
+!*.png
+!*.webp
 
 # Keep the .gitignore file itself
 !.gitignore

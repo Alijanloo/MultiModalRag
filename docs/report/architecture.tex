@@ -1,0 +1,251 @@
+% بخش معماری پروژه MultiModal RAG
+% این فایل جهت ادغام در main.tex طراحی شده است
+
+\section{معماری سیستم}
+
+این پروژه بر اساس الگوی معماری \lr{Clean Architecture} پیاده‌سازی شده است که امکان جداسازی مناسب نگرانی‌ها، مقیاس‌پذیری و نگهداری‌پذیری بالا را فراهم می‌آورد. انتخاب این معماری برای یک سیستم مبتنی بر مدل‌های زبانی بزرگ \lr{(LLM)} که نیازمند انعطاف‌پذیری بالا و قابلیت تست‌پذیری است، از اهمیت ویژه‌ای برخوردار است.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{clean_architecture.png}
+    \caption{نمودار معماری \lr{Clean Architecture} و لایه‌های آن}
+    \label{fig:clean_architecture}
+\end{figure}
+
+\noindent
+شکل \ref{fig:clean_architecture} نمودار کلی معماری \lr{Clean} را نشان می‌دهد که در آن جهت وابستگی‌ها از بیرون به درون است و لایه‌های مرکزی از جزئیات پیاده‌سازی مستقل هستند.
+
+\subsection{دلایل انتخاب معماری \lr{Clean}}
+
+انتخاب معماری \lr{Clean} برای این پروژه بر اساس چندین معیار کلیدی صورت گرفته است:
+
+\begin{itemize}    
+    \item \textbf{قابلیت تست‌پذیری:} با جداسازی لایه‌های مختلف و استفاده از تزریق وابستگی \lr{(Dependency Injection)}، امکان نوشتن تست‌های واحد و یکپارچه با پوشش بالا میسر می‌شود.
+    
+    \item \textbf{انعطاف‌پذیری در تعویض ارائه‌دهندگان \lr{LLM}:} سیستم طراحی شده به گونه‌ای است که تغییر یا افزودن ارائه‌دهندگان مختلف \lr{LLM} (مانند \lr{OpenAI}، \lr{Cohere}، یا مدل‌های متن‌باز) بدون تغییر در منطق اصلی امکان‌پذیر است.
+    
+    \item \textbf{مقیاس‌پذیری:} ساختار لایه‌بندی شده امکان توسعه و گسترش سیستم را در آینده تسهیل می‌کند.
+\end{itemize}
+
+\subsection{لایه‌های معماری}
+
+معماری این سیستم شامل چهار لایه اصلی است که هر کدام مسئولیت‌های مشخصی دارند و قانون وابستگی \lr{(Dependency Rule)} در آن‌ها رعایت می‌شود.
+
+\subsubsection{لایه موجودیت‌ها \lr{(Entities)}}
+
+این لایه، قلب سیستم را تشکیل می‌دهد و شامل \lr{enterprise business rules} است که مستقل از هرگونه جزئیات پیاده‌سازی خارجی هستند.
+
+\noindent
+\textbf{مسئولیت‌های این لایه:}
+\begin{itemize}
+    \item تعریف \lr{core data models} با استفاده از \lr{Pydantic}
+    \item \lr{Data validation} و اعمال \lr{business rules}
+    \item تضمین \lr{type-safety} و \lr{automatic serialization} داده‌ها
+\end{itemize}
+
+\noindent
+به عنوان مثال، موجودیت \lr{\texttt{DocChunk}} در سیستم ما شامل قوانین کسب‌وکار زیر است:
+
+\begin{itemize}
+    \item \textbf{تولید شناسه یکتا:} هر \lr{chunk} باید دارای شناسه‌ای یکتا باشد که بر اساس \lr{\texttt{document\_id}} و \lr{index} تولید می‌شود: \lr{\texttt{\{document\_id\}\_chunk\_\{index\}}}
+    
+    \item \textbf{اعتبارسنجی بردار \lr{embedding}:} اگر بردار \lr{embedding} موجود باشد، باید از نوع \lr{\texttt{List[float]}} و غیر خالی باشد
+    
+    \item \textbf{حفظ \lr{metadata} اصلی:} تمام اطلاعات \lr{meta} شامل \lr{schema\_name}، \lr{version} و \lr{doc\_items} باید حفظ شوند
+    
+    \item \textbf{تبدیل فرمت:} موجودیت باید قابلیت تبدیل دوطرفه به فرمت \lr{Elasticsearch} و \lr{Docling} را داشته باشد
+\end{itemize}
+
+\noindent
+این قوانین مستقل از جزئیات پیاده‌سازی \lr{database} یا \lr{search engine} تعریف شده‌اند و در صورت تغییر فناوری زیرساخت، دست‌نخورده باقی می‌مانند.
+
+
+\subsubsection{لایه \lr{(Use Cases)}}
+
+این لایه \lr{application business logic} را در بر می‌گیرد و \lr{workflow} بین \lr{entities} و \lr{interface adapters} را هماهنگ می‌کند.
+
+\noindent
+\textbf{مسئولیت‌های کلیدی:}
+\begin{itemize}
+    \item مدیریت جریان‌های کاری پیچیده با استفاده از \lr{LangGraph}
+    \item پیاده‌سازی \lr{RAG (Retrieval-Augmented Generation) pipelines}
+    \item تولید و مدیریت \lr{embeddings}
+    \item هماهنگی با سرویس‌های خارجی از طریق \lr{interfaces}
+\end{itemize}
+
+\noindent
+\textbf{\lr{Data Transfer Objects (DTOs)}:}
+
+\lr{DTOs} مدل‌های داده‌ای هستند که به‌طور خاص برای انتقال داده بین لایه‌های مختلف طراحی شده‌اند. این \lr{objects} در فایل \lr{\texttt{usecases/dtos.py}} قرار می‌گیرند و زمانی استفاده می‌شوند که:
+\begin{itemize}
+    \item \lr{Public APIs} (\lr{REST}، \lr{GraphQL} و غیره) ساخته می‌شود
+    \item یکپارچگی با سیستم‌های خارجی با \lr{data models} متفاوت مورد نیاز است
+    \item نیاز به \lr{versioning} دقیق و \lr{backward compatibility} وجود دارد
+\end{itemize}
+
+\subsubsection{لایه آداپتورهای رابط \lr{(Interface Adapters)}}
+
+این لایه وظیفه تبدیل داده‌ها بین موارد استفاده و دنیای خارج را بر عهده دارد.
+
+\noindent
+\textbf{اجزای این لایه شامل:}
+\begin{itemize}
+    \item \textbf{\lr{Controllers}:} مدیریت \lr{HTTP requests} و \lr{responses}
+    \item \textbf{\lr{Presenters}:} قالب‌بندی داده‌ها برای رابط کاربری یا مصرف‌کنندگان \lr{API}
+    \item \textbf{\lr{Gateways}:} رابط با سرویس‌های خارجی مانند \lr{databases}، \lr{vector stores} و \lr{third-party APIs}
+\end{itemize}
+
+\subsubsection{لایه فریم‌ورک‌ها و درایورها \lr{(Frameworks and Drivers)}}
+
+بیرونی‌ترین لایه سیستم که شامل جزئیات پیاده‌سازی ابزارها و فریم‌ورک‌های خارجی است.
+
+\noindent
+\textbf{مثال‌های موجود در این لایه:}
+\begin{itemize}
+    \item \lr{Web frameworks} (\lr{FastAPI}، \lr{Flask})
+    \item \lr{LLM providers} (\lr{OpenAI}، \lr{Cohere}، \lr{open-source models})
+    \item \lr{Databases} و \lr{vector stores} (\lr{Elasticsearch}، \lr{Redis}، \lr{Pinecone})
+    \item فریم‌ورک‌هایی مانند \lr{LangChain} و \lr{LangGraph}
+\end{itemize}
+
+\subsection{اصول طراحی}
+
+\subsubsection{قانون وابستگی \lr{(Dependency Rule)}}
+
+در این معماری، وابستگی‌ها همواره از لایه‌های بیرونی به سمت لایه‌های درونی هستند. این بدان معناست که:
+
+\begin{equation}
+\text{\lr{Frameworks/Drivers}} \rightarrow \text{\lr{Interface Adapters}} \rightarrow \text{\lr{Use Cases}} \rightarrow \text{\lr{Entities}}
+\end{equation}
+
+\noindent
+لایه‌های درونی هیچ‌گونه اطلاعی از لایه‌های بیرونی ندارند و این استقلال امکان تغییر پیاده‌سازی‌های خارجی را بدون تأثیر بر هسته سیستم فراهم می‌آورد.
+
+\subsubsection{اصل وارونگی وابستگی \lr{(Dependency Inversion Principle)}}
+
+برای حفظ قانون وابستگی، از \lr{interfaces} و کلاس‌های انتزاعی استفاده می‌شود. به این ترتیب:
+
+\begin{itemize}
+    \item \lr{Interfaces} در لایه‌های هسته (\lr{Use Cases}) تعریف می‌شوند
+    \item پیاده‌سازی‌های واقعی در لایه‌های بیرونی (\lr{Interface Adapters} یا \lr{Frameworks}) قرار می‌گیرند
+    \item لایه‌های سطح بالا به انتزاع وابسته‌اند، نه به پیاده‌سازی‌های خاص
+\end{itemize}
+
+\subsection{سیستم \lr{Dependency Injection}}
+
+برای مدیریت وابستگی‌ها و پیکربندی سیستم، از کتابخانه \lr{\texttt{dependency-injector}} استفاده شده است. این سیستم مزایای زیر را فراهم می‌آورد:
+
+\subsubsection{مزایای \lr{Dependency Injection}}
+
+\begin{itemize}
+    \item \textbf{\lr{Centralized configuration}:} تمام تنظیمات و وابستگی‌ها در یک \lr{container} مرکزی مدیریت می‌شوند
+    \item \textbf{تسهیل تست:} امکان جایگزینی وابستگی‌های واقعی با \lr{mocks} برای تست‌نویسی
+    \item \textbf{مدیریت \lr{singleton}:} کنترل \lr{lifecycle} منابع گران‌قیمت مانند \lr{database connections}
+    \item \textbf{انعطاف‌پذیری:} تغییر \lr{configuration} در \lr{runtime} بدون تغییر کد
+\end{itemize}
+
+\subsubsection{ساختار \lr{container}}
+
+درخت وابستگی سیستم به صورت زیر سازماندهی شده است:
+
+\begin{verbatim}
+ApplicationContainer
+├── Configuration (from env/files)
+├── LoggerFactory (Singleton)
+├── ElasticsearchConfig (Singleton)
+├── AsyncElasticsearch (Singleton)
+├── ElasticsearchDocumentAdaptor (Singleton)
+├── EmbeddingService (Factory)
+├── DocumentIndexingUseCase (Factory)
+└── DocumentSearchUseCase (Factory)
+\end{verbatim}
+
+\noindent
+\textbf{انواع \lr{providers}:}
+\begin{itemize}
+    \item \textbf{\lr{Factory}:} برای ایجاد نمونه جدید در هر بار استفاده
+    \item \textbf{\lr{Singleton}:} برای نگهداری یک نمونه واحد
+    \item \textbf{\lr{Resource}:} برای مدیریت چرخه حیات اشیاء پیچیده
+    \item \textbf{\lr{Configuration}:} برای مدیریت مقادیر پیکربندی
+\end{itemize}
+
+\subsection{یکپارچگی با فریم‌ورک‌های \lr{LLM}}
+
+یکی از چالش‌های اصلی این پروژه، یکپارچگی با فریم‌ورک‌های مختلف \lr{LLM} بوده است. معماری طراحی شده این امکان را فراهم می‌آورد که:
+
+\begin{itemize}
+    \item از چندین ارائه‌دهنده \lr{LLM} به صورت همزمان استفاده شود
+    \item جریان‌های کاری پیچیده با \lr{LangGraph} مدیریت شوند
+    \item عملیات \lr{RAG} به صورت ماژولار پیاده‌سازی شوند
+    \item تغییر یا ارتقای فریم‌ورک‌ها بدون تغییر منطق اصلی امکان‌پذیر باشد
+\end{itemize}
+
+\subsection{استفاده از \lr{Pydantic}}
+
+در لایه موجودیت‌ها، از کتابخانه \lr{Pydantic} برای تعریف \lr{data models} استفاده شده است. این انتخاب به دلایل زیر صورت گرفته است:
+
+\begin{itemize}
+    \item \textbf{\lr{Automatic validation}:} داده‌ها به صورت خودکار در زمان ایجاد \lr{object} اعتبارسنجی می‌شوند
+    \item \textbf{\lr{Type Safety}:} تضمین صحت \lr{data types} در زمان توسعه
+    \item \textbf{\lr{Serialization}:} تبدیل خودکار به \lr{JSON} و سایر فرمت ها
+    \item \textbf{\lr{Automatic documentation}:} تولید \lr{schema} برای \lr{APIs}
+\end{itemize}
+
+\subsection{مدیریت \lr{Error} و \lr{Logging}}
+
+سیستم دارای یک لایه یکپارچه برای \lr{error handling} و \lr{logging} است که:
+
+\begin{itemize}
+    \item از \lr{multi-level logging} پشتیبانی می‌کند
+    \item خطاها را به صورت ساختاریافته ثبت می‌کند
+    \item امکان \lr{request tracing} را فراهم می‌آورد
+    \item با سیستم‌های \lr{monitoring} خارجی قابل یکپارچگی است
+\end{itemize}
+
+\noindent
+سیستم \lr{logging} پیاده‌سازی شده در این پروژه، از قابلیت \lr{automatic rotation} و مدیریت \lr{log levels} مختلف برخوردار است. شکل \ref{fig:logging_example} نمونه‌ای از خروجی سیستم \lr{logging} را نشان می‌دهد که شامل \lr{timestamp}، نام \lr{module}، \lr{log level}، و \lr{message} مربوطه است.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{logging_example.png}
+    \caption{نمونه \lr{output} سیستم \lr{logging}}
+    \label{fig:logging_example}
+\end{figure}
+
+\subsection{مزایای معماری اتخاذ شده}
+
+پیاده‌سازی معماری \lr{Clean} در این پروژه مزایای زیر را به همراه داشته است:
+
+\begin{enumerate}
+    \item \textbf{\lr{High Maintainability}:} جداسازی واضح مسئولیت‌ها، درک و نگهداری کد را آسان می‌کند
+    
+    \item \textbf{\lr{Testability}:} هر لایه به صورت مستقل قابل تست است و نیازی به راه‌اندازی کل سیستم نیست
+    
+    \item \textbf{\lr{Flexibility}:} تغییر یا جایگزینی اجزای سیستم بدون تأثیر بر سایر بخش‌ها امکان‌پذیر است
+
+    \item \textbf{\lr{Scalability}:} افزودن قابلیت‌های جدید به دلیل ساختار ماژولار، آسان‌تر است
+
+    \item \textbf{\lr{Technology Independence}:} عدم وابستگی به فریم‌ورک‌ها و کتابخانه‌های خاص
+
+    \item \textbf{\lr{Better Team Collaboration}:} اعضای تیم می‌توانند به صورت موازی بر روی لایه‌های مختلف کار کنند
+\end{enumerate}
+
+\subsection{چالش‌ها و راه‌حل‌ها}
+
+در طول پیاده‌سازی این معماری، چالش‌هایی نیز وجود داشت که به شرح زیر برطرف شدند:
+
+\begin{itemize}
+    \item \textbf{\lr{Initial Complexity}:} راه‌اندازی اولیه سیستم زمان‌بر بود، اما این سرمایه‌گذاری در بلندمدت به صرفه بوده است
+    
+    \item \textbf{\lr{Circular Dependencies}:} با طراحی دقیق \lr{interfaces} و استفاده از \lr{dependency inversion} از آن جلوگیری شد
+    
+    \item \textbf{\lr{Performance}:} استفاده از \lr{singleton pattern} برای \lr{expensive resources} و \lr{caching} مناسب، مسائل \lr{performance} را برطرف کرد
+    
+    \item \textbf{\lr{Learning Curve}:} مستندسازی جامع و مثال‌های کاربردی، فهم معماری را برای توسعه‌دهندگان جدید تسهیل کرد
+\end{itemize}
+
+\newpage
+
+\section{نتیجه‌گیری معماری}
+
+معماری \lr{Clean} برای این پروژه \lr{MultiModal RAG}، بستری مناسب برای توسعه یک سیستم \lr{scalable}، \lr{maintainable} و \lr{flexible} فراهم آورده است. جداسازی واضح لایه‌ها، استفاده از \lr{dependency injection}، و رعایت اصول \lr{SOLID}، امکان توسعه پایدار و با کیفیت این سیستم را در بلندمدت تضمین می‌کند. این رویکرد معماری به‌ویژه برای سیستم‌های مبتنی بر \lr{LLM} که نیازمند \lr{flexibility} بالا در تعویض \lr{providers} و \lr{models} هستند، مناسب است.
