@@ -162,7 +162,6 @@ async def main():
         print("- Clean separation of concerns")
         print("- Easy testing with mock overrides")
         print("- Singleton management for expensive resources")
-        print("- Direct entity passing between layers for internal operations")
         print("- Still maintains clean architecture principles")
 
     except Exception as e:

@@ -13,7 +13,7 @@ from ...entities.document import (
 
 
 class IDocumentIndexRepository(ABC):
-    """Interface for document indexing operations with direct entity passing."""
+    """Interface for document indexing operations."""
 
     @abstractmethod
     async def index_document(

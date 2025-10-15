@@ -37,8 +37,6 @@ This project implemen9. **Agentic RAG**: Intelligent document retrieval with Lan
 
 #### Adaptors (`multimodal_rag/adaptors/`)
 - `elasticsearch_adaptor.py`: Elasticsearch implementation 
-  - Direct entity passing for internal operations
-  - Methods accept entities like `DocChunk`, `DoclingDocument` directly
   - Returns DTO responses for consistency with external boundaries
   - Separate field structures for documents (`document.*`) and chunks (`chunk.*`)
   - Vector similarity search support

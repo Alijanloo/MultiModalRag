@@ -47,7 +47,6 @@ class DocumentIndexingUseCase:
         if document_id is None:
             document_id = str(uuid.uuid4())
 
-        # Direct entity passing - let the adaptor handle the transformation
         return await self._document_repository.index_document(
             document=document, document_id=document_id, index_name=index_name
         )
@@ -64,11 +63,9 @@ class DocumentIndexingUseCase:
         if chunk_id is None:
             chunk_id = str(uuid.uuid4())
 
-        # Business logic: Generate embedding if needed
         if generate_embedding and self._embedding_service and chunk.vector is None:
             chunk.vector = await self._embedding_service.generate_embedding(chunk.text)
 
-        # Direct entity passing
         return await self._document_repository.index_chunk(
             chunk=chunk,
             chunk_id=chunk_id,
