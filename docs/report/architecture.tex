@@ -73,16 +73,6 @@
     \item هماهنگی با سرویس‌های خارجی از طریق \lr{interfaces}
 \end{itemize}
 
-\noindent
-\textbf{\lr{Data Transfer Objects (DTOs)}:}
-
-\lr{DTOs} مدل‌های داده‌ای هستند که به‌طور خاص برای انتقال داده بین لایه‌های مختلف طراحی شده‌اند. این \lr{objects} در فایل \lr{\texttt{usecases/dtos.py}} قرار می‌گیرند و زمانی استفاده می‌شوند که:
-\begin{itemize}
-    \item \lr{Public APIs} (\lr{REST}، \lr{GraphQL} و غیره) ساخته می‌شود
-    \item یکپارچگی با سیستم‌های خارجی با \lr{data models} متفاوت مورد نیاز است
-    \item نیاز به \lr{versioning} دقیق و \lr{backward compatibility} وجود دارد
-\end{itemize}
-
 \subsubsection{لایه آداپتورهای رابط \lr{(Interface Adapters)}}
 
 این لایه وظیفه تبدیل داده‌ها بین موارد استفاده و دنیای خارج را بر عهده دارد.
@@ -105,7 +95,6 @@
     \item \lr{Web frameworks} (\lr{FastAPI}، \lr{Flask})
     \item \lr{LLM providers} (\lr{OpenAI}، \lr{Cohere}، \lr{open-source models})
     \item \lr{Databases} و \lr{vector stores} (\lr{Elasticsearch}، \lr{Redis}، \lr{Pinecone})
-    \item فریم‌ورک‌هایی مانند \lr{LangChain} و \lr{LangGraph}
 \end{itemize}
 
 \subsection{اصول طراحی}
@@ -131,6 +120,16 @@
     \item لایه‌های سطح بالا به انتزاع وابسته‌اند، نه به پیاده‌سازی‌های خاص
 \end{itemize}
 
+
+\noindent
+
+\textbf{مثال کاربردی:} در سیستم ما، \lr{use case}ای به نام \lr{agentic\_rag} ماژولی از نوع \lr{EmbeddingServiceInterface} دریافت می‌کند. این \lr{use case} توابعی مانند \lr{embed\_single} را فراخوانی می‌کند، بدون آنکه بداند پیاده‌سازی واقعی از چه ارائه‌دهنده‌ای استفاده می‌کند (مانند \lr{OpenAI}، \lr{Google GenAI}، \lr{Azure}، یا مدل‌های متن‌باز). این امر به این دلیل امکان‌پذیر است که:
+
+\begin{itemize}
+    \item \lr{Use case} تنها به \lr{contract} تعریف شده در \lr{interface} وابسته است
+    \item تعویض ارائه‌دهنده \lr{embedding} بدون تغییر در منطق کسب‌وکار به راحتی امکان‌پذیر است
+\end{itemize}
+
 \subsection{سیستم \lr{Dependency Injection}}
 
 برای مدیریت وابستگی‌ها و پیکربندی سیستم، از کتابخانه \lr{\texttt{dependency-injector}} استفاده شده است. این سیستم مزایای زیر را فراهم می‌آورد:
@@ -144,29 +143,16 @@
     \item \textbf{انعطاف‌پذیری:} تغییر \lr{configuration} در \lr{runtime} بدون تغییر کد
 \end{itemize}
 
-\subsubsection{ساختار \lr{container}}
-
-درخت وابستگی سیستم به صورت زیر سازماندهی شده است:
-
-\begin{verbatim}
-ApplicationContainer
-├── Configuration (from env/files)
-├── LoggerFactory (Singleton)
-├── ElasticsearchConfig (Singleton)
-├── AsyncElasticsearch (Singleton)
-├── ElasticsearchDocumentAdaptor (Singleton)
-├── EmbeddingService (Factory)
-├── DocumentIndexingUseCase (Factory)
-└── DocumentSearchUseCase (Factory)
-\end{verbatim}
-
 \noindent
-\textbf{انواع \lr{providers}:}
+\textbf{انواع \lr{providers} در کتابخانه \lr{dependency-injector}:}
 \begin{itemize}
-    \item \textbf{\lr{Factory}:} برای ایجاد نمونه جدید در هر بار استفاده
-    \item \textbf{\lr{Singleton}:} برای نگهداری یک نمونه واحد
-    \item \textbf{\lr{Resource}:} برای مدیریت چرخه حیات اشیاء پیچیده
-    \item \textbf{\lr{Configuration}:} برای مدیریت مقادیر پیکربندی
+    \item \textbf{\lr{Factory}:} برای ایجاد نمونه جدید در هر بار استفاده. این نوع \lr{provider} هر بار که درخواست می‌شود، یک \lr{instance} جدید از کلاس مورد نظر ایجاد می‌کند. برای اشیائی مناسب است که \lr{stateless} هستند یا هر بار نیاز به تنظیمات تازه دارند.
+    
+    \item \textbf{\lr{Singleton}:} برای نگهداری یک نمونه واحد در طول عمر برنامه. این \lr{provider} فقط یک بار شیء را می‌سازد و در تمام درخواست‌های بعدی همان نمونه را بازمی‌گرداند. برای منابع گران‌قیمت مانند اتصالات \lr{database}، \lr{HTTP clients} یا \lr{configuration objects} مفید است.
+    
+    \item \textbf{\lr{Resource}:} برای مدیریت چرخه حیات اشیاء پیچیده که نیاز به راه‌اندازی و پاکسازی دارند. این \lr{provider} قابلیت‌های \lr{lifecycle management} مانند \lr{initialization}، \lr{cleanup} و مدیریت منابع سیستمی را فراهم می‌آورد. برای سرویس‌هایی که نیاز به \lr{graceful shutdown} دارند، ایده‌آل است.
+    
+    \item \textbf{\lr{Configuration}:} برای مدیریت و تزریق مقادیر پیکربندی مانند \lr{environment variables}، تنظیمات \lr{API}، یا پارامترهای سیستم. این \lr{provider} امکان خواندن مقادیر از فایل‌های \lr{config}، متغیرهای محیطی یا منابع خارجی را فراهم می‌آورد و آن‌ها را در سراسر سیستم در دسترس قرار می‌دهد.
 \end{itemize}
 
 \subsection{یکپارچگی با فریم‌ورک‌های \lr{LLM}}
@@ -188,7 +174,7 @@ ApplicationContainer
     \item \textbf{\lr{Automatic validation}:} داده‌ها به صورت خودکار در زمان ایجاد \lr{object} اعتبارسنجی می‌شوند
     \item \textbf{\lr{Type Safety}:} تضمین صحت \lr{data types} در زمان توسعه
     \item \textbf{\lr{Serialization}:} تبدیل خودکار به \lr{JSON} و سایر فرمت ها
-    \item \textbf{\lr{Automatic documentation}:} تولید \lr{schema} برای \lr{APIs}
+    \item \textbf{\lr{Automatic documentation}:} تولید \lr{schema} برای \lr{API}ها
 \end{itemize}
 
 \subsection{مدیریت \lr{Error} و \lr{Logging}}
@@ -203,6 +189,15 @@ ApplicationContainer
 \end{itemize}
 
 \noindent
+به عنوان مثال، میتوان از \lr{Prometheus} برای جمع‌آوری متریک ها و از \lr{Grafana} برای \lr{visualization} استفاده کرد تا به اهداف زیر رسید:
+
+\begin{itemize}
+    \item \textbf{\lr{Metrics Collection}:} \lr{Response times}، تعداد درخواست‌ها، نرخ خطا، و استفاده از منابع
+    \item \textbf{\lr{Health Checks}:} بررسی وضعیت سرویس‌های \lr{LLM}، \lr{database connections}، و \lr{vector stores}
+    \item \textbf{\lr{Alerting}:} اطلاع‌رسانی خودکار در صورت بروز مشکل از طریق \lr{Slack} یا \lr{Email}
+\end{itemize}
+
+\noindent
 سیستم \lr{logging} پیاده‌سازی شده در این پروژه، از قابلیت \lr{automatic rotation} و مدیریت \lr{log levels} مختلف برخوردار است. شکل \ref{fig:logging_example} نمونه‌ای از خروجی سیستم \lr{logging} را نشان می‌دهد که شامل \lr{timestamp}، نام \lr{module}، \lr{log level}، و \lr{message} مربوطه است.
 
 \begin{figure}[h]
@@ -212,40 +207,6 @@ ApplicationContainer
     \label{fig:logging_example}
 \end{figure}
 
-\subsection{مزایای معماری اتخاذ شده}
-
-پیاده‌سازی معماری \lr{Clean} در این پروژه مزایای زیر را به همراه داشته است:
-
-\begin{enumerate}
-    \item \textbf{\lr{High Maintainability}:} جداسازی واضح مسئولیت‌ها، درک و نگهداری کد را آسان می‌کند
-    
-    \item \textbf{\lr{Testability}:} هر لایه به صورت مستقل قابل تست است و نیازی به راه‌اندازی کل سیستم نیست
-    
-    \item \textbf{\lr{Flexibility}:} تغییر یا جایگزینی اجزای سیستم بدون تأثیر بر سایر بخش‌ها امکان‌پذیر است
-
-    \item \textbf{\lr{Scalability}:} افزودن قابلیت‌های جدید به دلیل ساختار ماژولار، آسان‌تر است
-
-    \item \textbf{\lr{Technology Independence}:} عدم وابستگی به فریم‌ورک‌ها و کتابخانه‌های خاص
-
-    \item \textbf{\lr{Better Team Collaboration}:} اعضای تیم می‌توانند به صورت موازی بر روی لایه‌های مختلف کار کنند
-\end{enumerate}
-
-\subsection{چالش‌ها و راه‌حل‌ها}
-
-در طول پیاده‌سازی این معماری، چالش‌هایی نیز وجود داشت که به شرح زیر برطرف شدند:
-
-\begin{itemize}
-    \item \textbf{\lr{Initial Complexity}:} راه‌اندازی اولیه سیستم زمان‌بر بود، اما این سرمایه‌گذاری در بلندمدت به صرفه بوده است
-    
-    \item \textbf{\lr{Circular Dependencies}:} با طراحی دقیق \lr{interfaces} و استفاده از \lr{dependency inversion} از آن جلوگیری شد
-    
-    \item \textbf{\lr{Performance}:} استفاده از \lr{singleton pattern} برای \lr{expensive resources} و \lr{caching} مناسب، مسائل \lr{performance} را برطرف کرد
-    
-    \item \textbf{\lr{Learning Curve}:} مستندسازی جامع و مثال‌های کاربردی، فهم معماری را برای توسعه‌دهندگان جدید تسهیل کرد
-\end{itemize}
-
-\newpage
-
-\section{نتیجه‌گیری معماری}
+\subsection{نتیجه‌گیری معماری}
 
 معماری \lr{Clean} برای این پروژه \lr{MultiModal RAG}، بستری مناسب برای توسعه یک سیستم \lr{scalable}، \lr{maintainable} و \lr{flexible} فراهم آورده است. جداسازی واضح لایه‌ها، استفاده از \lr{dependency injection}، و رعایت اصول \lr{SOLID}، امکان توسعه پایدار و با کیفیت این سیستم را در بلندمدت تضمین می‌کند. این رویکرد معماری به‌ویژه برای سیستم‌های مبتنی بر \lr{LLM} که نیازمند \lr{flexibility} بالا در تعویض \lr{providers} و \lr{models} هستند، مناسب است.
