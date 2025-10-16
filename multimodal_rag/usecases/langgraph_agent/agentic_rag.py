@@ -33,6 +33,7 @@ class AgentState(TypedDict):
     retrieved_chunks: List[DocChunk]
     chunk_ids_used: List[str]
     search_query: str
+    document_relevance: str
 
 
 class AgenticRAGUseCase:
@@ -193,19 +194,17 @@ class AgenticRAGUseCase:
             )
             return {"messages": state["messages"] + [error_response]}
 
-    async def _grade_documents(
-        self, state: AgentState
-    ) -> Literal["generate_answer", "rewrite_question"]:
-        """Determine whether the retrieved documents are relevant to the question."""
+    async def _grade_documents(self, state: AgentState) -> Dict[str, str]:
+        """Node that grades whether the retrieved documents are relevant to the question."""
         try:
             search_query = state.get("search_query")
             retrieved_content = state["messages"][-1].content
 
             if not search_query or not retrieved_content:
-                return "rewrite_question"
+                return {"document_relevance": "no"}
 
             if "No relevant documents found" in retrieved_content:
-                return "rewrite_question"
+                return {"document_relevance": "no"}
 
             grade_prompt = AgenticRAGPrompts.get_document_grading_prompt(
                 retrieved_content, search_query
@@ -214,12 +213,23 @@ class AgenticRAGUseCase:
             response = await self._llm_service.generate_content(grade_prompt)
 
             if "yes" in response.lower():
-                return "generate_answer"
+                return {"document_relevance": "yes"}
             else:
-                return "rewrite_question"
+                return {"document_relevance": "no"}
 
         except Exception as e:
             logger.error(f"Error in _grade_documents: {e}")
+            return {"document_relevance": "no"}
+
+    def _route_after_grading(
+        self, state: AgentState
+    ) -> Literal["generate_answer", "rewrite_question"]:
+        """Conditional edge that routes based on document relevance grading."""
+        document_relevance = state.get("document_relevance", "no")
+
+        if document_relevance == "yes":
+            return "generate_answer"
+        else:
             return "rewrite_question"
 
     async def _rewrite_query(self, state: AgentState) -> Dict[str, str]:
@@ -288,6 +298,7 @@ class AgenticRAGUseCase:
                 "generate_query_or_respond", self._generate_query_or_respond
             )
             workflow.add_node("retrieve", ToolNode([self._retriever_tool]))
+            workflow.add_node("grade_documents", self._grade_documents)
             workflow.add_node("rewrite_question", self._rewrite_query)
             workflow.add_node("generate_answer", self._generate_answer)
 
@@ -302,9 +313,11 @@ class AgenticRAGUseCase:
                 },
             )
 
+            workflow.add_edge("retrieve", "grade_documents")
+
             workflow.add_conditional_edges(
-                "retrieve",
-                self._grade_documents,
+                "grade_documents",
+                self._route_after_grading,
             )
 
             workflow.add_edge("generate_answer", END)
@@ -352,6 +365,7 @@ class AgenticRAGUseCase:
                 "retrieved_chunks": [],
                 "chunk_ids_used": [],
                 "search_query": "",
+                "document_relevance": "",
             }
 
             async for chunk in self._graph.astream(accumulated_state, config=config):
@@ -372,6 +386,11 @@ class AgenticRAGUseCase:
 
                     if "search_query" in update:
                         accumulated_state["search_query"] = update["search_query"]
+
+                    if "document_relevance" in update:
+                        accumulated_state["document_relevance"] = update[
+                            "document_relevance"
+                        ]
 
             if not accumulated_state["messages"]:
                 raise ValueError("Workflow did not produce any output")
