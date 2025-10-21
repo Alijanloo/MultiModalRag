@@ -79,7 +79,7 @@ The RAG system uses **LangGraph** to create an **agentic reasoning workflow**, w
 
 * Intelligent decision-making to determine when to retrieve or directly answer.
 * Context-aware document retrieval with **Elasticsearch**.
-* Query rewriting for unanswerable or ambiguous questions.
+* Query rewriting for unanswerable or ambiguous questions (e.g., "symptoms of type 2 diabetes mellitus" → "symptoms of type 2 diabetes mellitus diagnosis criteria").
 * Answer generation with detailed source attribution.
 * Visual grounding: retrieves and attaches related images and metadata to answers.
 * Context preservation across dialogue sessions.
