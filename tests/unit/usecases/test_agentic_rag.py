@@ -117,6 +117,37 @@ class TestAgenticRAGUseCase:
         mock_document_repository.search_chunks.assert_called()
 
     @pytest.mark.asyncio
+    async def test_process_question_requiring_query_rewriting(
+        self, agentic_rag_use_case, mock_document_repository, mock_llm_service
+    ):
+        """Test processing a question that requires document retrieval."""
+        mock_llm_service.generate_content_with_tools.return_value = {
+            "text": "",
+            "function_calls": [
+            {
+                "name": "retrieve_documents",
+                "args": {"query": "symptoms of type 2 diabetes mellitus"}
+            }
+            ],
+            "has_function_call": True
+        }
+        
+        mock_llm_service.generate_content.side_effect = [
+            "no",  # Document grading response
+            "symptoms of type 2 diabetes mellitus diagnosis criteria", # Rewritten query
+            "yes",
+            "Machine learning is a subset of artificial intelligence."
+        ]
+        
+        response = await agentic_rag_use_case.process_message(
+            "What is machine learning?"
+        )
+
+        assert isinstance(response, AgentResponse)
+        assert response.content is not None
+        mock_document_repository.search_chunks.assert_called()
+
+    @pytest.mark.asyncio
     async def test_process_with_conversation_history(self, agentic_rag_use_case):
         """Test processing a message with conversation history."""
         history = [

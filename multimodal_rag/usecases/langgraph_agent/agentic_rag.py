@@ -84,6 +84,7 @@ class AgenticRAGUseCase:
                 Retrieved document content as formatted string with chunk IDs
             """
             try:
+                query = state["search_query"] or query # prioritize the customized query in later iterations in the loop
                 vector = await self._embedding_service.embed_single(query)
 
                 chunks = await self._document_repository.search_chunks(
@@ -223,14 +224,14 @@ class AgenticRAGUseCase:
 
     def _route_after_grading(
         self, state: AgentState
-    ) -> Literal["generate_answer", "rewrite_question"]:
+    ) -> Literal["generate_answer", "rewrite_query"]:
         """Conditional edge that routes based on document relevance grading."""
         document_relevance = state.get("document_relevance", "no")
 
         if document_relevance == "yes":
             return "generate_answer"
         else:
-            return "rewrite_question"
+            return "rewrite_query"
 
     async def _rewrite_query(self, state: AgentState) -> Dict[str, str]:
         """Rewrite the original user question for better retrieval."""
@@ -299,7 +300,7 @@ class AgenticRAGUseCase:
             )
             workflow.add_node("retrieve", ToolNode([self._retriever_tool]))
             workflow.add_node("grade_documents", self._grade_documents)
-            workflow.add_node("rewrite_question", self._rewrite_query)
+            workflow.add_node("rewrite_query", self._rewrite_query)
             workflow.add_node("generate_answer", self._generate_answer)
 
             workflow.add_edge(START, "generate_query_or_respond")
@@ -321,7 +322,7 @@ class AgenticRAGUseCase:
             )
 
             workflow.add_edge("generate_answer", END)
-            workflow.add_edge("rewrite_question", "generate_query_or_respond")
+            workflow.add_edge("rewrite_query", "retrieve")
 
             checkpointer = InMemorySaver()
             self._graph = workflow.compile(checkpointer=checkpointer)
