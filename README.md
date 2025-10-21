@@ -2,6 +2,8 @@
 
 **A Multimodal, Agentic RAG System for Intelligent Document Processing**
 
+![Demo](docs/demo.gif)
+
 ---
 
 ## 📘 Overview
@@ -59,13 +61,17 @@ The system uses **[Docling](https://github.com/IBM/Docling)**, an open-source li
 * Accurate table extraction via **TableFormer**.
 * Layout analysis using **Heron (RT-DETR + ResNet-50)**.
 * Optical Character Recognition (OCR) with **EasyOCR (CRAFT + CRNN)**.
-* Image captioning with **Gemini 2.5-Flash** (for complex visuals).
+* Image captioning with **Gemini 2.5-Flash** to enable content-based image retrieval.
+For example, when text discusses a skin condition and includes a diagnostic image, the image description enables retrieval based on visual content, enriching responses with related diagnostic information.
 * Intelligent contextual chunking that preserves semantic relations.
 * Structured output in **Markdown** and **JSON** for downstream processing.
 
 ---
 
 ### 🧠 2. Agentic RAG System
+
+![Agentic RAG Workflow](docs/report/agentic_rag_workflow.png)
+
 
 The RAG system uses **LangGraph** to create an **agentic reasoning workflow**, where each node represents a step in the retrieval and generation process.
 
@@ -102,13 +108,25 @@ Each chunk is semantically enriched with metadata (e.g., section, page number, c
 
 ---
 
-## Installation
+## Quick Start
+
+### Installation
 
 ```bash
 uv pip install torch --index-url https://download.pytorch.org/whl/cpu
 uv pip install -e .
 ```
 
+### Launch
+
+```bash
+# Copy and customize configuration
+cp config.yaml.example config.yaml
+# Edit config.yaml with your API tokens and settings
+
+# Run the application
+python multimodal_rag
+```
 ---
 
 ## 📄 License
