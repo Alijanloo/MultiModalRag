@@ -1,8 +1,5 @@
-"""Example script to run the Telegram bot with AgenticRAG integration."""
-
 import asyncio
 import signal
-import sys
 from typing import Optional
 
 from multimodal_rag.frameworks.logging_config import get_logger
@@ -22,14 +19,10 @@ class TelegramBotRunner:
     async def initialize(self) -> None:
         """Initialize the application container and bot service."""
         try:
-            # Initialize dependency injection container
             self.container = ApplicationContainer()
-            self.container.config.from_yaml("config.yaml")
 
-            # Initialize container resources
             await self.container.init_resources()
 
-            # Get the telegram bot service
             self.bot_service = await self.container.telegram_bot_service()
 
             logger.info("Telegram bot runner initialized successfully")
@@ -75,7 +68,6 @@ class TelegramBotRunner:
                         pass
 
             finally:
-                # Ensure bot service is shutdown properly
                 await self.bot_service.shutdown()
 
         except KeyboardInterrupt:
@@ -104,34 +96,3 @@ class TelegramBotRunner:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         await self.shutdown()
-
-
-async def main():
-    """Main function to run the Telegram bot."""
-    try:
-        async with TelegramBotRunner() as bot_runner:
-            await bot_runner.run()
-    except Exception as e:
-        logger.error(f"Critical error in main: {e}")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    # Check if config file exists
-    import os
-
-    if not os.path.exists("config.yaml"):
-        logger.error(
-            "config.yaml not found. Please copy config.yaml.example to config.yaml "
-            "and configure it with your API keys and settings."
-        )
-        sys.exit(1)
-
-    # Run the bot
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Application terminated by user")
-    except Exception as e:
-        logger.error(f"Application failed: {e}")
-        sys.exit(1)

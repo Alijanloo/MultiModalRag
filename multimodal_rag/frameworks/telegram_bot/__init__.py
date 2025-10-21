@@ -5,6 +5,7 @@ from .conversation_manager import ConversationManager
 from .chunk_manager import ChunkManager
 from .response_formatter import ResponseFormatter
 from .message_handlers import MessageHandlers
+from .runner import TelegramBotRunner
 
 __all__ = [
     "TelegramBotService",
@@ -12,4 +13,5 @@ __all__ = [
     "ChunkManager",
     "ResponseFormatter",
     "MessageHandlers",
+    "TelegramBotRunner"
 ]
